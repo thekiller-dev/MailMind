@@ -1,0 +1,12 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "pnpm install --frozen-lockfile",
+  "buildCommand": "pnpm run build",
+  "crons": [
+    {
+      "path": "/api/public/hooks/sync-emails",
+      "schedule": "*/15 * * * *"
+    }
+  ]
+}

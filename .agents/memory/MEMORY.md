@@ -1,0 +1,1 @@
+- [Supabase realtime WebSocket throw](supabase-realtime-node-websocket.md) — server-side `createClient()` can throw a Node WebSocket error at construction time under Vite SSR; fix with `realtime: { transport: ws }` server-only.
