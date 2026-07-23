@@ -10,13 +10,25 @@ import {
   signState,
 } from "./gmail.server";
 
+function normalizeOrigin(value: string): string {
+  const url = new URL(value);
+  if (!/^https?:$/.test(url.protocol) || url.pathname !== "/" || url.search || url.hash) {
+    throw new Error("Invalid OAuth origin");
+  }
+  return url.origin;
+}
+
 function resolveOrigin(requested: string): string {
-  const configured = process.env.APP_ORIGIN?.replace(/\/$/, "");
-  const request = getRequest();
-  const requestOrigin = request ? new URL(request.url).origin : requested;
-  const expected = configured ?? requestOrigin;
-  if (requested !== expected) throw new Error("Invalid OAuth origin");
-  return expected;
+  const allowed = (process.env.APP_ORIGINS ?? process.env.APP_ORIGIN ?? "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean)
+    .map(normalizeOrigin);
+  if (allowed.length === 0) throw new Error("Missing APP_ORIGIN");
+
+  const normalizedRequested = normalizeOrigin(requested);
+  if (!allowed.includes(normalizedRequested)) throw new Error("Invalid OAuth origin");
+  return normalizedRequested;
 }
 
 export const getGmailAuthUrl = createServerFn({ method: "POST" })
