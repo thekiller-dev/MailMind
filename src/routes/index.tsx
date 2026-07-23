@@ -54,7 +54,7 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "MailMind connecte Gmail via OAuth 2.0 et analyse chaque e-mail : résumés, classification, score de risque et extraction d'entités.",
+          "MailMind est un assistant intelligent pour Gmail qui résume les e-mails, classe les messages, détecte les risques et extrait les actions à traiter.",
       },
       { property: "og:title", content: "MailMind — Assistant intelligent pour Gmail" },
       {
@@ -74,6 +74,7 @@ function Landing() {
         <BackgroundOrbs />
         <Hero />
         <Logos />
+        <ProductPurpose />
         <ProductTour />
         <Features />
         <UseCases />
@@ -86,6 +87,49 @@ function Landing() {
       </main>
       <SiteFooter />
     </>
+  );
+}
+
+function ProductPurpose() {
+  return (
+    <section id="about" aria-labelledby="about-title" className="px-6 pb-20 pt-4 md:pb-28">
+      <div className="mx-auto grid max-w-6xl gap-8 rounded-3xl glass p-7 sm:p-10 md:grid-cols-[0.8fr_1.2fr] md:items-center md:p-12">
+        <div>
+          <span className="font-mono text-[10px] font-bold uppercase tracking-[0.25em] text-muted-foreground">
+            À propos de MailMind
+          </span>
+          <h2
+            id="about-title"
+            className="mt-3 font-display text-3xl leading-tight tracking-wide sm:text-4xl"
+          >
+            Votre assistant intelligent pour Gmail.
+          </h2>
+        </div>
+        <div className="text-sm leading-relaxed text-muted-foreground sm:text-base">
+          <p>
+            MailMind est une application qui connecte votre compte Gmail via OAuth 2.0 pour vous
+            aider à comprendre et traiter vos e-mails. L’application synchronise les messages,
+            génère des résumés, les classe, détecte les signaux de risque et met en évidence les
+            actions importantes.
+          </p>
+          <div className="mt-5 flex flex-wrap gap-2 font-mono text-[9px] uppercase tracking-wider">
+            {[
+              "Résumés d’e-mails",
+              "Classification",
+              "Détection des risques",
+              "Actions à traiter",
+            ].map((item) => (
+              <span
+                key={item}
+                className="rounded-full border border-border bg-background/30 px-3 py-1.5 text-muted-foreground"
+              >
+                {item}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
