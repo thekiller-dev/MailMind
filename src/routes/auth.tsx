@@ -12,6 +12,7 @@ import {
   Radar,
   ShieldCheck,
   Sparkles,
+  User,
   Zap,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,6 +34,7 @@ type AuthMode = "signin" | "signup" | "forgot";
 function Auth() {
   const navigate = useNavigate();
   const [mode, setMode] = useState<AuthMode>("signup");
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -47,6 +49,7 @@ function Auth() {
 
   function changeMode(nextMode: AuthMode) {
     setMode(nextMode);
+    setFullName("");
     setPassword("");
     setConfirmPassword("");
     setShowPassword(false);
@@ -78,6 +81,11 @@ function Auth() {
       return;
     }
 
+    if (mode === "signup" && fullName.trim().length < 2) {
+      toast.error("Saisissez votre nom complet.");
+      return;
+    }
+
     if (password.length < 8) {
       toast.error("Votre mot de passe doit contenir au moins 8 caractères.");
       return;
@@ -93,7 +101,10 @@ function Auth() {
         const { data, error } = await supabase.auth.signUp({
           email: normalizedEmail,
           password,
-          options: { emailRedirectTo: `${window.location.origin}/dashboard` },
+          options: {
+            data: { full_name: fullName.trim() },
+            emailRedirectTo: `${window.location.origin}/dashboard`,
+          },
         });
         if (error) throw error;
         if (!data.session) {
@@ -211,6 +222,20 @@ function Auth() {
                     required
                   />
                 </Field>
+
+                {isSignup && (
+                  <Field label="Nom complet" icon={User}>
+                    <input
+                      type="text"
+                      autoComplete="name"
+                      placeholder="Alex Martin"
+                      value={fullName}
+                      onChange={(event) => setFullName(event.target.value)}
+                      minLength={2}
+                      required
+                    />
+                  </Field>
+                )}
 
                 {!isForgot && (
                   <>
