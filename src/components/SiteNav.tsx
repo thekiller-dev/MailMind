@@ -95,12 +95,7 @@ export function SiteNav() {
 
 export function Logo() {
   return (
-    <div className="grid size-8 place-items-center rounded-lg glass">
-      <div
-        className="size-2 rounded-full bg-foreground"
-        style={{ boxShadow: "0 0 12px currentColor" }}
-      />
-    </div>
+    <img src="/mailmind-mark.svg" alt="" className="size-8 rounded-lg" width="32" height="32" />
   );
 }
 

@@ -1,0 +1,10 @@
+{
+  "name": "MailMind",
+  "short_name": "MailMind",
+  "description": "Assistant intelligent pour votre boîte de réception.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#080e16",
+  "theme_color": "#080e16",
+  "icons": [{ "src": "/mailmind-mark.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

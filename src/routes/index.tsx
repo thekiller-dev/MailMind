@@ -50,13 +50,13 @@ import {
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "MailMind AI — Le copilote intelligent de votre messagerie" },
+      { title: "MailMind — Assistant intelligent pour Gmail" },
       {
         name: "description",
         content:
           "MailMind connecte Gmail via OAuth 2.0 et analyse chaque e-mail : résumés, classification, score de risque et extraction d'entités.",
       },
-      { property: "og:title", content: "MailMind AI — Copilote de messagerie" },
+      { property: "og:title", content: "MailMind — Assistant intelligent pour Gmail" },
       {
         property: "og:description",
         content: "Filtrez le bruit. Identifiez les menaces. Extrayez les actions.",
@@ -126,14 +126,14 @@ function Hero() {
           </span>
         </div>
         <h1 className="text-balance font-display text-5xl leading-[0.95] tracking-tight sm:text-6xl md:text-8xl">
-          <span className="hero-line block">Votre boîte mail</span>
+          <span className="hero-line block">MailMind</span>
           <span className="hero-line block bg-gradient-to-b from-foreground to-foreground/40 bg-clip-text text-transparent">
-            a une plus haute mission.
+            votre assistant Gmail.
           </span>
         </h1>
         <p className="hero-sub text-pretty mx-auto mt-7 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-          MailMind filtre le bruit, identifie les messages à risque et extrait vos actions grâce à
-          une analyse structurée. Arrêtez de lire — commencez à savoir.
+          MailMind est un assistant intelligent pour Gmail : il résume vos e-mails, classe les
+          messages, détecte les risques et extrait les actions à traiter.
         </p>
         <div className="hero-cta mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <Link

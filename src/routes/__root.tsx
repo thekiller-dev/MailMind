@@ -75,23 +75,28 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "MailMind AI — Assistant intelligent de messagerie" },
+      { title: "MailMind — Assistant intelligent pour Gmail" },
       {
         name: "description",
         content:
-          "MailMind AI connecte votre compte Gmail pour résumer, classer et analyser vos e-mails grâce à l'IA.",
+          "MailMind est un assistant intelligent pour Gmail qui résume, classe et analyse vos e-mails pour vous aider à traiter les messages importants.",
       },
-      { property: "og:title", content: "MailMind AI" },
+      { property: "og:title", content: "MailMind — Assistant intelligent pour Gmail" },
       {
         property: "og:description",
         content:
           "Copilote de messagerie. Résumés, détection de phishing, extraction d'entités, multi-comptes.",
       },
       { property: "og:type", content: "website" },
+      { property: "og:image", content: "/mailmind-logo.svg" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:image", content: "/mailmind-logo.svg" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
+      { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
+      { rel: "apple-touch-icon", href: "/mailmind-mark.svg" },
+      { rel: "manifest", href: "/site.webmanifest" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {

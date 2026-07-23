@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">MailMind</title>
+  <desc id="desc">Symbole MailMind, un noyau intelligent entoure de signaux.</desc>
+  <defs>
+    <linearGradient id="surface" x1="18" y1="8" x2="108" y2="120" gradientUnits="userSpaceOnUse"><stop stop-color="#182b3c"/><stop offset="1" stop-color="#080e16"/></linearGradient>
+    <linearGradient id="signal" x1="26" y1="35" x2="102" y2="94" gradientUnits="userSpaceOnUse"><stop stop-color="#67e8f9"/><stop offset=".52" stop-color="#a5f3fc"/><stop offset="1" stop-color="#a78bfa"/></linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <rect x="4" y="4" width="120" height="120" rx="32" fill="url(#surface)"/>
+  <path d="M27 64a37 37 0 0 1 12-27M101 64a37 37 0 0 0-12-27M27 64a37 37 0 0 0 12 27M101 64a37 37 0 0 1-12 27" fill="none" stroke="url(#signal)" stroke-width="3" stroke-linecap="round" opacity=".8"/>
+  <circle cx="64" cy="64" r="25" fill="#f8fafc"/>
+  <path d="m46 55 18 14 18-14v20a4 4 0 0 1-4 4H50a4 4 0 0 1-4-4V55Z" fill="#122333"/>
+  <path d="m46 55 18 14 18-14" fill="none" stroke="url(#signal)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="64" cy="64" r="4" fill="#22d3ee" filter="url(#glow)"/>
+  <circle cx="25" cy="64" r="3" fill="#67e8f9"/><circle cx="103" cy="64" r="3" fill="#a78bfa"/>
+</svg>

@@ -17,13 +17,14 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { GmailIcon } from "@/components/ProviderIcons";
+import { Logo } from "@/components/SiteNav";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Connexion — MailMind AI" },
-      { name: "description", content: "Créez votre compte ou connectez-vous à MailMind AI." },
+      { title: "Connexion — MailMind" },
+      { name: "description", content: "Créez votre compte ou connectez-vous à MailMind." },
     ],
   }),
   component: Auth,
@@ -149,9 +150,7 @@ function Auth() {
       <div className="relative mx-auto grid min-h-screen max-w-[1500px] lg:grid-cols-[0.9fr_1.1fr]">
         <section className="flex min-h-screen flex-col px-5 py-5 sm:px-8 lg:px-12 xl:px-16">
           <Link to="/" className="flex w-fit items-center gap-2.5 rounded-full py-2 pr-4">
-            <div className="grid size-8 place-items-center rounded-xl bg-foreground text-background shadow-lg shadow-foreground/10">
-              <span className="size-2 rounded-full bg-background" />
-            </div>
+            <Logo />
             <span className="font-display text-lg tracking-wider">MAILMIND</span>
           </Link>
 
