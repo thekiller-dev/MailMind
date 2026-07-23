@@ -11,6 +11,17 @@ import {
 import { AppShell, EmptyState } from "@/components/AppShell";
 import { ProviderIcon } from "@/components/ProviderIcons";
 import { useAccounts, useEmails } from "@/lib/data-hooks";
+import {
+  Area,
+  AreaChart,
+  Cell,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -55,6 +66,19 @@ function Dashboard() {
   const priority = [...emails]
     .sort((a, b) => (b.risk_score ?? 0) - (a.risk_score ?? 0))
     .slice(0, 5);
+  const flowData = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date();
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() - (6 - index));
+    return {
+      day: date.toLocaleDateString("fr-FR", { weekday: "short" }).replace(".", ""),
+      messages: emails.filter((email) => {
+        const received = new Date(email.received_at);
+        return received >= date && received < new Date(date.getTime() + 86_400_000);
+      }).length,
+    };
+  });
+  const categoryColors = ["#60a5fa", "#42d392", "#f87171", "#a78bfa", "#737373"];
 
   if (!loading && emails.length === 0 && accounts.length === 0) {
     return (
@@ -106,47 +130,121 @@ function Dashboard() {
           <div className="rounded-3xl glass p-6 sm:p-8 lg:col-span-2">
             <div className="mb-6 flex items-end justify-between">
               <div>
-                <h2 className="font-display text-xl tracking-wide sm:text-2xl">
-                  Répartition par catégorie
-                </h2>
+                <h2 className="font-display text-xl tracking-wide sm:text-2xl">Flux de la boîte</h2>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {totalCategorized} e-mails classés
+                  Messages reçus sur les 7 derniers jours
                 </p>
               </div>
-              <Link
-                to="/inbox"
-                className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground"
-              >
-                Voir inbox →
-              </Link>
+              <span className="rounded-full border border-border px-2.5 py-1 font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
+                Temps réel
+              </span>
+            </div>
+            <div className="h-64 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={flowData} margin={{ top: 8, right: 4, left: -28, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="dashboardFlow" x1="0" x2="0" y1="0" y2="1">
+                      <stop offset="0%" stopColor="#22d3ee" stopOpacity={0.28} />
+                      <stop offset="100%" stopColor="#22d3ee" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis
+                    dataKey="day"
+                    tick={{ fill: "#737373", fontSize: 10 }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    allowDecimals={false}
+                    tick={{ fill: "#737373", fontSize: 10 }}
+                    axisLine={false}
+                    tickLine={false}
+                    width={28}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      background: "#0a0a0a",
+                      border: "1px solid #292929",
+                      borderRadius: 10,
+                      fontSize: 11,
+                    }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="messages"
+                    name="Messages"
+                    stroke="#22d3ee"
+                    strokeWidth={2.5}
+                    fill="url(#dashboardFlow)"
+                    dot={{ r: 3, fill: "#22d3ee", strokeWidth: 0 }}
+                    activeDot={{ r: 5, fill: "#0a0a0a", stroke: "#22d3ee", strokeWidth: 2 }}
+                    isAnimationActive
+                    animationDuration={1200}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+          <div className="rounded-3xl glass p-6 sm:p-8">
+            <div className="mb-4 flex items-end justify-between">
+              <div>
+                <h2 className="font-display text-xl tracking-wide sm:text-2xl">Répartition</h2>
+                <p className="mt-1 text-xs text-muted-foreground">Catégories détectées</p>
+              </div>
+              <span className="font-mono text-[10px] text-muted-foreground">
+                {totalCategorized}
+              </span>
             </div>
             {distribution.length === 0 ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">
-                Aucun e-mail analysé pour le moment.
-              </p>
+              <p className="py-12 text-center text-sm text-muted-foreground">Aucune catégorie.</p>
             ) : (
-              <div className="space-y-5">
-                {distribution.map((cat) => {
-                  const pct = Math.round((cat.count / totalCategorized) * 100);
-                  return (
-                    <div key={cat.name}>
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-medium">{cat.name}</span>
-                        <span className="font-mono text-muted-foreground">
-                          {cat.count} · {pct}%
-                        </span>
-                      </div>
-                      <div className="mt-2 h-1 overflow-hidden rounded-full bg-foreground/[0.06]">
-                        <div
-                          className="h-full rounded-full bg-foreground/80 transition-all"
-                          style={{ width: `${pct}%` }}
+              <div className="h-56">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={distribution}
+                      dataKey="count"
+                      nameKey="name"
+                      innerRadius={55}
+                      outerRadius={82}
+                      paddingAngle={3}
+                      stroke="none"
+                      isAnimationActive
+                      animationDuration={1200}
+                    >
+                      {distribution.map((entry, index) => (
+                        <Cell
+                          key={entry.name}
+                          fill={categoryColors[index % categoryColors.length]}
                         />
-                      </div>
-                    </div>
-                  );
-                })}
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        background: "#0a0a0a",
+                        border: "1px solid #292929",
+                        borderRadius: 10,
+                        fontSize: 11,
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
               </div>
             )}
+            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-2">
+              {distribution.slice(0, 5).map((entry, index) => (
+                <span
+                  key={entry.name}
+                  className="flex items-center gap-1.5 font-mono text-[9px] text-muted-foreground"
+                >
+                  <span
+                    className="size-1.5 rounded-full"
+                    style={{ background: categoryColors[index % categoryColors.length] }}
+                  />
+                  {entry.name}
+                </span>
+              ))}
+            </div>
           </div>
 
           <div className="rounded-3xl glass p-6 sm:p-8">

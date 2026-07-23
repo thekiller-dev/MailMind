@@ -8,6 +8,7 @@ import { generateEmailReply } from "@/lib/email-analysis.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { z } from "zod";
+import { readableEmailBody } from "@/lib/email-content";
 
 export const Route = createFileRoute("/inbox")({
   validateSearch: z.object({ q: z.string().optional() }).parse,
@@ -44,7 +45,7 @@ function InboxPage() {
     });
   }, [emails, filter, query]);
 
-  const selected = emails.find((e) => e.id === selectedId) ?? visible[0] ?? null;
+  const selected = emails.find((e) => e.id === selectedId) ?? null;
 
   if (!loading && emails.length === 0) {
     return (
@@ -60,9 +61,9 @@ function InboxPage() {
 
   return (
     <AppShell title="Inbox unifiée">
-      <div className="flex h-[calc(100vh-3.5rem)] flex-col lg:flex-row">
+      <div className="relative min-h-[calc(100vh-3.5rem)]">
         {/* List */}
-        <div className="flex w-full shrink-0 flex-col border-b border-border bg-background lg:w-96 lg:border-b-0 lg:border-r">
+        <div className="flex min-h-[calc(100vh-3.5rem)] w-full flex-col border-border bg-background">
           <div className="border-b border-border p-3">
             <input
               value={query}
@@ -125,15 +126,13 @@ function InboxPage() {
           </div>
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-col bg-background">
-          {selected && <EmailDetail email={selected} />}
-        </div>
+        {selected && <EmailDetail email={selected} onClose={() => setSelectedId(null)} />}
       </div>
     </AppShell>
   );
 }
 
-function EmailDetail({ email }: { email: DbEmail }) {
+function EmailDetail({ email, onClose }: { email: DbEmail; onClose: () => void }) {
   const entities = Array.isArray(email.entities)
     ? (email.entities as { type: string; value: string }[])
     : [];
@@ -176,7 +175,7 @@ function EmailDetail({ email }: { email: DbEmail }) {
         data: {
           sender: email.sender,
           subject: email.subject,
-          body: email.body ?? email.snippet ?? "",
+          body: readableEmailBody(email.body ?? email.snippet),
         },
       });
       setReply(result.text);
@@ -201,118 +200,139 @@ function EmailDetail({ email }: { email: DbEmail }) {
   }
 
   return (
-    <div className="flex h-full min-w-0 flex-col xl:flex-row">
-      <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
-        <div className="border-b border-border px-6 py-5 sm:px-8 sm:py-6">
-          <h2 className="font-display text-xl font-bold tracking-tight sm:text-2xl">
-            {email.subject}
-          </h2>
-          <p className="mt-2 text-sm font-medium">{email.sender}</p>
-          <p className="mt-1 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-            {new Date(email.received_at).toLocaleString("fr-FR")}
-          </p>
-          <div className="mt-4 flex gap-2">
-            <IconButton
-              icon={Reply}
-              label="Générer une réponse"
-              onClick={handleGenerate}
-              disabled={pending !== null}
-            />
-            <IconButton
-              icon={Archive}
-              label="Archiver"
-              onClick={handleArchive}
-              disabled={pending !== null}
-            />
-            <IconButton
-              icon={Flag}
-              label="Signaler"
-              onClick={handleReport}
-              disabled={pending !== null}
-            />
-          </div>
-        </div>
-        <div className="px-6 py-5 sm:px-8 sm:py-6">
-          <p className="whitespace-pre-line text-sm leading-relaxed">{email.body}</p>
-        </div>
-      </div>
-
-      <aside className="w-full shrink-0 border-t border-border bg-surface-muted/30 p-5 sm:p-6 xl:w-96 xl:border-l xl:border-t-0">
-        <div className="mb-6 flex items-center gap-2">
-          <div className="size-2 rounded-full bg-foreground" />
-          <span className="font-display text-xs font-bold uppercase tracking-widest">
-            MindPanel
-          </span>
-        </div>
-        <div className="space-y-6">
-          {email.summary && (
-            <Section title="Résumé">
-              <p className="text-sm leading-relaxed">{email.summary}</p>
-            </Section>
-          )}
-          <div className="grid grid-cols-2 gap-3">
-            <Mini label="Intention" value={email.intent ?? "—"} />
-            <Mini label="Sentiment" value={email.sentiment ?? "—"} />
-          </div>
-          {entities.length > 0 && (
-            <Section title="Entités extraites">
-              <div className="flex flex-wrap gap-2">
-                {entities.map((e, i) => (
-                  <span
-                    key={i}
-                    className="rounded border border-border bg-surface px-2 py-1 font-mono text-[10px]"
-                    title={e.type}
-                  >
-                    {e.value}
-                  </span>
-                ))}
-              </div>
-            </Section>
-          )}
-          <RiskCard risk={risk} reason={email.risk_reason} />
-          {reply ? (
-            <div className="space-y-2">
-              <label
-                htmlFor="reply"
-                className="font-mono text-[10px] font-bold uppercase text-muted-foreground"
+    <div
+      className="fixed inset-0 z-50 flex justify-end bg-background/60 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+    >
+      <button
+        aria-label="Fermer le message"
+        onClick={onClose}
+        className="absolute inset-0 cursor-default"
+      />
+      <div className="relative flex h-full w-full max-w-6xl min-w-0 flex-col bg-background shadow-2xl xl:flex-row">
+        <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
+          <div className="border-b border-border px-6 py-5 sm:px-8 sm:py-6">
+            <div className="flex items-start justify-between gap-4">
+              <h2 className="font-display text-xl font-bold tracking-tight sm:text-2xl">
+                {email.subject}
+              </h2>
+              <button
+                onClick={onClose}
+                className="rounded-lg border border-border px-3 py-1 text-xs text-muted-foreground hover:text-foreground"
               >
-                Réponse proposée
-              </label>
-              <textarea
-                id="reply"
-                value={reply}
-                onChange={(event) => setReply(event.target.value)}
-                className="min-h-32 w-full rounded-lg border border-border bg-surface p-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-              <div className="flex gap-2">
-                <button
-                  onClick={handleSend}
-                  disabled={pending !== null || !reply.trim()}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-foreground py-2.5 text-xs font-semibold text-background disabled:opacity-50"
-                >
-                  Envoyer
-                </button>
-                <button
-                  onClick={() => setReply("")}
-                  disabled={pending !== null}
-                  className="rounded-lg border border-border px-3 text-xs font-semibold text-muted-foreground"
-                >
-                  Annuler
-                </button>
-              </div>
+                Fermer
+              </button>
             </div>
-          ) : (
-            <button
-              onClick={handleGenerate}
-              disabled={pending !== null}
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-foreground py-2.5 text-xs font-semibold text-background transition-transform active:scale-95 disabled:opacity-50"
-            >
-              <Sparkles className="size-3.5" />{" "}
-              {pending === "generate" ? "Génération…" : "Générer une réponse IA"}
-            </button>
-          )}
+            <p className="mt-2 text-sm font-medium">{email.sender}</p>
+            <p className="mt-1 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+              {new Date(email.received_at).toLocaleString("fr-FR")}
+            </p>
+            <div className="mt-4 flex gap-2">
+              <IconButton
+                icon={Reply}
+                label="Générer une réponse"
+                onClick={handleGenerate}
+                disabled={pending !== null}
+              />
+              <IconButton
+                icon={Archive}
+                label="Archiver"
+                onClick={handleArchive}
+                disabled={pending !== null}
+              />
+              <IconButton
+                icon={Flag}
+                label="Signaler"
+                onClick={handleReport}
+                disabled={pending !== null}
+              />
+            </div>
+          </div>
+          <div className="px-6 py-5 sm:px-8 sm:py-6">
+            <p className="whitespace-pre-line text-sm leading-relaxed">
+              {readableEmailBody(email.body ?? email.snippet)}
+            </p>
+          </div>
         </div>
-      </aside>
+
+        <aside className="w-full shrink-0 overflow-y-auto border-t border-border bg-surface-muted/30 p-5 sm:p-6 xl:w-96 xl:border-l xl:border-t-0">
+          <div className="mb-6 flex items-center gap-2">
+            <div className="size-2 rounded-full bg-foreground" />
+            <span className="font-display text-xs font-bold uppercase tracking-widest">
+              MindPanel
+            </span>
+          </div>
+          <div className="space-y-6">
+            {email.summary && (
+              <Section title="Résumé">
+                <p className="text-sm leading-relaxed">{email.summary}</p>
+              </Section>
+            )}
+            <div className="grid grid-cols-2 gap-3">
+              <Mini label="Intention" value={email.intent ?? "—"} />
+              <Mini label="Sentiment" value={email.sentiment ?? "—"} />
+            </div>
+            {entities.length > 0 && (
+              <Section title="Entités extraites">
+                <div className="flex flex-wrap gap-2">
+                  {entities.map((e, i) => (
+                    <span
+                      key={i}
+                      className="rounded border border-border bg-surface px-2 py-1 font-mono text-[10px]"
+                      title={e.type}
+                    >
+                      {e.value}
+                    </span>
+                  ))}
+                </div>
+              </Section>
+            )}
+            <RiskCard risk={risk} reason={email.risk_reason} />
+            {reply ? (
+              <div className="space-y-2">
+                <label
+                  htmlFor="reply"
+                  className="font-mono text-[10px] font-bold uppercase text-muted-foreground"
+                >
+                  Réponse proposée
+                </label>
+                <textarea
+                  id="reply"
+                  value={reply}
+                  onChange={(event) => setReply(event.target.value)}
+                  className="min-h-32 w-full rounded-lg border border-border bg-surface p-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSend}
+                    disabled={pending !== null || !reply.trim()}
+                    className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-foreground py-2.5 text-xs font-semibold text-background disabled:opacity-50"
+                  >
+                    Envoyer
+                  </button>
+                  <button
+                    onClick={() => setReply("")}
+                    disabled={pending !== null}
+                    className="rounded-lg border border-border px-3 text-xs font-semibold text-muted-foreground"
+                  >
+                    Annuler
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={handleGenerate}
+                disabled={pending !== null}
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-foreground py-2.5 text-xs font-semibold text-background transition-transform active:scale-95 disabled:opacity-50"
+              >
+                <Sparkles className="size-3.5" />{" "}
+                {pending === "generate" ? "Génération…" : "Générer une réponse IA"}
+              </button>
+            )}
+          </div>
+        </aside>
+      </div>
     </div>
   );
 }

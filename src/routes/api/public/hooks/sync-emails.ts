@@ -1,8 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { timingSafeEqual } from "node:crypto";
 
-// Cron endpoint. Called by pg_cron every 15 min.
-// Syncs every google account whose last sync is older than 10 minutes.
+// Cron endpoint. Syncs every Google account whose last sync is older than 10 minutes.
 // Auth: a dedicated CRON_SECRET (NOT the public publishable key, which ships to
 // the client and would let anyone trigger syncs). Send it as `x-cron-secret`
 // or `Authorization: Bearer <secret>`.
@@ -42,7 +41,7 @@ export const Route = createFileRoute("/api/public/hooks/sync-emails")({
         const results: Array<{ id: string; ok: boolean; error?: string }> = [];
         for (const a of accounts ?? []) {
           try {
-            await syncGmailAccount(supabaseAdmin, a.id, { maxMessages: 10, analyze: true });
+            await syncGmailAccount(supabaseAdmin, a.id, { analyze: true });
             results.push({ id: a.id, ok: true });
           } catch (e) {
             results.push({

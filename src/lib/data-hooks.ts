@@ -125,7 +125,7 @@ export function useEmails() {
         .select("*")
         .is("archived_at", null)
         .order("received_at", { ascending: false })
-        .limit(200)
+        .limit(500)
         .then(({ data }) => {
           if (!cancelled) {
             setEmails((data as DbEmail[]) ?? []);

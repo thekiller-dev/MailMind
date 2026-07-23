@@ -47,7 +47,7 @@ export const syncMyAccount = createServerFn({ method: "POST" })
       .single();
     if (!acc || acc.user_id !== context.userId) throw new Error("Forbidden");
     const { syncGmailAccount } = await import("./gmail-sync.server");
-    return await syncGmailAccount(supabaseAdmin, data.accountId, { maxMessages: 15 });
+    return await syncGmailAccount(supabaseAdmin, data.accountId, { analyze: true });
   });
 
 export const disconnectAccount = createServerFn({ method: "POST" })

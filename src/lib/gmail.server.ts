@@ -1,5 +1,6 @@
 // Server-only Gmail OAuth + API helpers.
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { htmlToText } from "./email-content";
 
 const GOOGLE_AUTH = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN = "https://oauth2.googleapis.com/token";
@@ -130,16 +131,27 @@ export async function listMessageIds(
   accessToken: string,
   opts: { maxResults?: number; q?: string } = {},
 ): Promise<string[]> {
-  const params = new URLSearchParams({
-    maxResults: String(opts.maxResults ?? 15),
-    q: opts.q ?? "in:inbox newer_than:14d",
-  });
-  const res = await fetch(`${GMAIL_API}/messages?${params}`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-  if (!res.ok) throw new Error(`Gmail list failed: ${res.status}`);
-  const data = (await res.json()) as { messages?: { id: string }[] };
-  return (data.messages ?? []).map((m) => m.id);
+  const requested = Math.min(Math.max(opts.maxResults ?? 100, 1), 500);
+  const ids: string[] = [];
+  let pageToken: string | undefined;
+
+  while (ids.length < requested) {
+    const params = new URLSearchParams({
+      maxResults: String(Math.min(100, requested - ids.length)),
+      q: opts.q ?? process.env.GMAIL_SYNC_QUERY ?? "in:inbox newer_than:14d",
+    });
+    if (pageToken) params.set("pageToken", pageToken);
+    const res = await fetch(`${GMAIL_API}/messages?${params}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok) throw new Error(`Gmail list failed: ${res.status}`);
+    const data = (await res.json()) as { messages?: { id: string }[]; nextPageToken?: string };
+    ids.push(...(data.messages ?? []).map((m) => m.id));
+    if (!data.nextPageToken || !data.messages?.length) break;
+    pageToken = data.nextPageToken;
+  }
+
+  return ids.slice(0, requested);
 }
 
 export interface GmailMessage {
@@ -170,22 +182,15 @@ function extractBody(payload: unknown): string {
   const p = payload as { mimeType?: string; body?: { data?: string }; parts?: unknown[] };
   if (!p) return "";
   if (p.body?.data && (!p.mimeType || p.mimeType.startsWith("text/"))) {
-    return b64urlDecode(p.body.data);
+    return p.mimeType === "text/html"
+      ? htmlToText(b64urlDecode(p.body.data))
+      : b64urlDecode(p.body.data);
   }
-  if (Array.isArray(p.parts)) {
-    // prefer text/plain, fallback text/html stripped
-    const plain = p.parts.find((x) => (x as { mimeType?: string }).mimeType === "text/plain");
-    if (plain) return extractBody(plain);
-    const html = p.parts.find((x) => (x as { mimeType?: string }).mimeType === "text/html");
-    if (html)
-      return extractBody(html)
-        .replace(/<[^>]+>/g, " ")
-        .replace(/\s+/g, " ");
+  if (Array.isArray(p.parts))
     for (const part of p.parts) {
       const r = extractBody(part);
       if (r) return r;
     }
-  }
   return "";
 }
 

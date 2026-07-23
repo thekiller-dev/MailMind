@@ -90,10 +90,7 @@ export const Route = createFileRoute("/api/gmail/callback")({
           const accountId = upsert.data.id;
           try {
             const { syncGmailAccount } = await import("@/lib/gmail-sync.server");
-            await syncGmailAccount(supabaseAdmin, accountId, {
-              maxMessages: 15,
-              analyze: true,
-            });
+            await syncGmailAccount(supabaseAdmin, accountId, { analyze: true });
           } catch (e) {
             // Non-fatal: the account is connected; the cron will retry the sync.
             console.error("initial sync failed", e);

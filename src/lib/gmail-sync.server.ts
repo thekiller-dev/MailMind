@@ -73,7 +73,9 @@ export async function syncGmailAccount(
 
   try {
     const accessToken = await ensureFreshToken(supabase, account);
-    const ids = await listMessageIds(accessToken, { maxResults: opts.maxMessages ?? 15 });
+    const configuredMax = Number(process.env.GMAIL_SYNC_MAX_MESSAGES ?? 100);
+    const maxMessages = Math.min(Math.max(opts.maxMessages ?? configuredMax, 1), 500);
+    const ids = await listMessageIds(accessToken, { maxResults: maxMessages });
 
     let inserted = 0;
     let analyzed = 0;
