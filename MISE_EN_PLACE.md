@@ -90,7 +90,7 @@ Le endpoint suivant est protege par `CRON_SECRET` :
 POST /api/public/hooks/sync-emails
 ```
 
-Le fichier `vercel.json` demande une execution toutes les 15 minutes. Verifier que :
+Le fichier `vercel.json` demande une execution quotidienne a 03:00 UTC, compatible avec le plan Vercel Hobby. Une frequence plus elevee necessite Vercel Pro ou un ordonnanceur externe. Verifier que :
 
 - `CRON_SECRET` est defini dans l'environnement de production.
 - Le fournisseur de deployement active bien les cron jobs.
