@@ -1,10 +1,20 @@
 import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Download, Loader2, Plus, RefreshCw, Trash2 } from "lucide-react";
+import {
+  CheckCircle2,
+  Copy,
+  Download,
+  ExternalLink,
+  Loader2,
+  Mail,
+  RefreshCw,
+  Trash2,
+} from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { ProviderIcon } from "@/components/ProviderIcons";
-import { useAccounts, useEmails, useUserSettings } from "@/lib/data-hooks";
-import { disconnectAccount, getGmailAuthUrl, syncMyAccount } from "@/lib/gmail.functions";
+import { useAccounts, useEmails, useUser, useUserSettings } from "@/lib/data-hooks";
+import { disconnectAccount, syncMyAccount } from "@/lib/gmail.functions";
+import { createForwardingInbox, getForwardingInbox } from "@/lib/forwarding.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -83,20 +93,47 @@ function Card({
 
 function AccountsTab() {
   const { accounts, loading } = useAccounts();
-  const getUrl = useServerFn(getGmailAuthUrl);
+  const { user } = useUser();
   const sync = useServerFn(syncMyAccount);
   const disconnect = useServerFn(disconnectAccount);
+  const getInbox = useServerFn(getForwardingInbox);
+  const createInbox = useServerFn(createForwardingInbox);
   const [pending, setPending] = useState<string | null>(null);
+  const [sourceEmail, setSourceEmail] = useState("");
+  const [inbox, setInbox] = useState<Awaited<ReturnType<typeof getInbox>> | null>(null);
 
-  async function connectGmail() {
-    setPending("connect");
+  useEffect(() => {
+    if (!sourceEmail && user?.email) setSourceEmail(user.email);
+  }, [sourceEmail, user?.email]);
+
+  useEffect(() => {
+    if (!accounts.some((account) => account.provider === "forwarding")) return;
+    void getInbox()
+      .then((result) => {
+        if (result) {
+          setInbox(result);
+          setSourceEmail(result.sourceEmail);
+        }
+      })
+      .catch(() => undefined);
+  }, [accounts, getInbox]);
+
+  async function setupForwarding() {
+    setPending("forwarding");
     try {
-      const { url } = await getUrl({ data: { origin: window.location.origin } });
-      window.location.href = url;
+      const result = await createInbox({ data: { sourceEmail } });
+      setInbox(result);
+      toast.success("Adresse MailMind créée.");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erreur");
+      toast.error(e instanceof Error ? e.message : "Création impossible");
+    } finally {
       setPending(null);
     }
+  }
+
+  async function copy(value: string) {
+    await navigator.clipboard.writeText(value);
+    toast.success("Copié dans le presse-papiers");
   }
 
   async function handleSync(id: string) {
@@ -126,16 +163,11 @@ function AccountsTab() {
 
   return (
     <Card
-      title="Comptes connectés"
-      desc="Connectez Gmail via OAuth 2.0. Tokens chiffrés côté serveur — révocation immédiate."
+      title="Réception des e-mails"
+      desc="Transférez vos nouveaux messages Gmail vers MailMind, sans donner accès à votre compte Google."
     >
       <div className="space-y-3">
         {loading && <p className="text-xs text-muted-foreground">Chargement…</p>}
-        {!loading && accounts.length === 0 && (
-          <p className="text-sm text-muted-foreground">
-            Aucun compte mail connecté pour le moment.
-          </p>
-        )}
         {accounts.map((a) => (
           <div key={a.id} className="flex items-center gap-3 rounded-xl glass-subtle p-4">
             <ProviderIcon provider={a.provider} className="size-8" />
@@ -149,18 +181,20 @@ function AccountsTab() {
                 {a.status !== "connected" && ` · ${a.status}`}
               </p>
             </div>
-            <button
-              onClick={() => handleSync(a.id)}
-              disabled={pending === a.id}
-              title="Synchroniser"
-              className="grid size-9 place-items-center rounded-md glass-subtle text-muted-foreground hover:text-foreground disabled:opacity-40"
-            >
-              {pending === a.id ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <RefreshCw className="size-4" />
-              )}
-            </button>
+            {a.provider === "google" && (
+              <button
+                onClick={() => handleSync(a.id)}
+                disabled={pending === a.id}
+                title="Synchroniser"
+                className="grid size-9 place-items-center rounded-md glass-subtle text-muted-foreground hover:text-foreground disabled:opacity-40"
+              >
+                {pending === a.id ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="size-4" />
+                )}
+              </button>
+            )}
             <button
               onClick={() => handleDisconnect(a.id)}
               disabled={pending === a.id}
@@ -170,18 +204,98 @@ function AccountsTab() {
             </button>
           </div>
         ))}
-        <button
-          onClick={connectGmail}
-          disabled={pending === "connect"}
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border py-3 text-sm font-semibold text-muted-foreground hover:bg-white/[0.03] disabled:opacity-50"
-        >
-          {pending === "connect" ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <Plus className="size-4" />
-          )}
-          Connecter un compte Gmail
-        </button>
+
+        {!inbox ? (
+          <div className="rounded-xl border border-dashed border-border p-4">
+            <label className="text-xs font-medium" htmlFor="forwarding-source-email">
+              Adresse Gmail à analyser
+            </label>
+            <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+              <input
+                id="forwarding-source-email"
+                type="email"
+                value={sourceEmail}
+                onChange={(event) => setSourceEmail(event.target.value)}
+                placeholder="vous@gmail.com"
+                className="h-10 flex-1 rounded-md border border-border bg-background px-3 text-sm"
+              />
+              <button
+                onClick={setupForwarding}
+                disabled={pending === "forwarding" || !sourceEmail}
+                className="flex h-10 items-center justify-center gap-2 rounded-md bg-foreground px-4 text-sm font-semibold text-background disabled:opacity-50"
+              >
+                {pending === "forwarding" ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Mail className="size-4" />
+                )}
+                Créer mon adresse
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-xl border border-border bg-background/40 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">
+                  Votre adresse de transfert privée
+                </p>
+                <p className="mt-1 break-all font-mono text-sm font-semibold">{inbox.address}</p>
+              </div>
+              {inbox.address && (
+                <button
+                  onClick={() => copy(inbox.address!)}
+                  className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-xs font-medium hover:bg-surface-muted"
+                >
+                  <Copy className="size-3.5" /> Copier
+                </button>
+              )}
+            </div>
+
+            <ol className="mt-5 space-y-2 text-sm text-muted-foreground">
+              <li>1. Ouvrez Gmail sur ordinateur, puis Paramètres → Voir tous les paramètres.</li>
+              <li>2. Dans « Transfert et POP/IMAP », ajoutez l’adresse MailMind ci-dessus.</li>
+              <li>3. Revenez ici lorsque Google a envoyé le message de confirmation.</li>
+              <li>4. Saisissez le code dans Gmail, activez le transfert et enregistrez.</li>
+            </ol>
+
+            {inbox.confirmationCode && (
+              <div className="mt-5 flex flex-wrap items-center gap-3 rounded-lg bg-primary/10 p-3">
+                <CheckCircle2 className="size-5 text-primary" />
+                <div className="flex-1">
+                  <p className="text-xs text-muted-foreground">Code de confirmation Gmail</p>
+                  <p className="font-mono text-lg font-bold tracking-wider">
+                    {inbox.confirmationCode}
+                  </p>
+                </div>
+                <button
+                  onClick={() => copy(inbox.confirmationCode!)}
+                  className="rounded-md border border-border p-2 hover:bg-background"
+                  title="Copier le code"
+                >
+                  <Copy className="size-4" />
+                </button>
+              </div>
+            )}
+
+            {inbox.confirmationUrl && (
+              <a
+                href={inbox.confirmationUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-primary hover:underline"
+              >
+                Confirmer directement chez Google <ExternalLink className="size-3.5" />
+              </a>
+            )}
+
+            {inbox.status === "connected" && (
+              <p className="mt-4 flex items-center gap-2 text-sm font-medium text-safe">
+                <CheckCircle2 className="size-4" /> Transfert actif
+              </p>
+            )}
+          </div>
+        )}
       </div>
     </Card>
   );

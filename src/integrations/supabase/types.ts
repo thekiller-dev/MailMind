@@ -15,8 +15,12 @@ export type Database = {
           display_name: string | null;
           email: string;
           error: string | null;
+          forwarding_confirmation_code: string | null;
+          forwarding_confirmation_url: string | null;
           history_id: string | null;
           id: string;
+          inbound_alias: string | null;
+          last_forwarded_at: string | null;
           last_synced_at: string | null;
           provider: string;
           provider_account_id: string | null;
@@ -32,8 +36,12 @@ export type Database = {
           display_name?: string | null;
           email: string;
           error?: string | null;
+          forwarding_confirmation_code?: string | null;
+          forwarding_confirmation_url?: string | null;
           history_id?: string | null;
           id?: string;
+          inbound_alias?: string | null;
+          last_forwarded_at?: string | null;
           last_synced_at?: string | null;
           provider: string;
           provider_account_id?: string | null;
@@ -49,8 +57,12 @@ export type Database = {
           display_name?: string | null;
           email?: string;
           error?: string | null;
+          forwarding_confirmation_code?: string | null;
+          forwarding_confirmation_url?: string | null;
           history_id?: string | null;
           id?: string;
+          inbound_alias?: string | null;
+          last_forwarded_at?: string | null;
           last_synced_at?: string | null;
           provider?: string;
           provider_account_id?: string | null;

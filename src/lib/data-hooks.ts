@@ -16,6 +16,7 @@ export interface DbEmail {
   entities: unknown;
   received_at: string;
   account_id: string | null;
+  provider_message_id: string | null;
   analyzed_at: string | null;
   archived_at: string | null;
   reported_at: string | null;

@@ -24,6 +24,9 @@ AI_AUTH_HEADER=Authorization
 AI_AUTH_PREFIX=Bearer
 TOKEN_ENCRYPTION_KEY=
 CRON_SECRET=
+RESEND_API_KEY=
+RESEND_WEBHOOK_SECRET=
+INBOUND_EMAIL_DOMAIN=mailmind.me
 APP_ORIGIN=https://www.mailmind.me
 APP_ORIGINS=http://localhost:5000,https://mailmind.me,https://www.mailmind.me
 AI_ANALYSIS_MODEL=gpt-4o-mini
@@ -33,7 +36,7 @@ GMAIL_SYNC_QUERY=in:inbox newer_than:14d
 
 ### Regles de securite
 
-- Ne jamais publier `SUPABASE_SERVICE_ROLE_KEY`, `GOOGLE_OAUTH_CLIENT_SECRET`, `AI_API_KEY`, `TOKEN_ENCRYPTION_KEY` ou `CRON_SECRET`.
+- Ne jamais publier `SUPABASE_SERVICE_ROLE_KEY`, `GOOGLE_OAUTH_CLIENT_SECRET`, `AI_API_KEY`, `TOKEN_ENCRYPTION_KEY`, `CRON_SECRET`, `RESEND_API_KEY` ou `RESEND_WEBHOOK_SECRET`.
 - Utiliser une valeur longue et aleatoire pour `TOKEN_ENCRYPTION_KEY`.
 - Garder `.env` hors du depot Git. `.env.example` peut etre versionne.
 - Le fichier `.env` historique du projet etait deja suivi par Git : verifier son historique et retirer toute cle sensible si necessaire.
@@ -56,6 +59,7 @@ La migration ajoute :
 
 - `risk_reason`, `archived_at` et `reported_at` dans `public.emails`.
 - La table `public.user_settings`.
+- Les métadonnées nécessaires aux adresses privées de transfert.
 - Les index necessaires.
 - Les politiques RLS des preferences utilisateur.
 
@@ -75,17 +79,30 @@ Verifier ensuite que la migration suivante est bien appliquee :
 supabase/migrations/20260722220000_harden_mailmind.sql
 ```
 
-## 4. Configurer Google OAuth
+## 4. Configurer la réception Resend
 
-Dans Google Cloud Console :
+Dans Resend :
 
-- Ajouter l'URL de callback `APP_ORIGIN/api/gmail/callback` dans les URI de redirection autorisees.
-- Autoriser les scopes Gmail `gmail.modify` et `gmail.send`.
-- Verifier que le consentement OAuth correspond a l'environnement deploye.
+- Activer `Receiving` pour `mailmind.me`.
+- Créer un webhook pour l'événement `email.received`.
+- Utiliser l'URL `https://udfkcqhuhqpunvlhgpdc.supabase.co/functions/v1/resend-inbound`.
+- Copier son secret de signature dans `RESEND_WEBHOOK_SECRET`.
 
-Les comptes Gmail deja connectes doivent etre reconnectes afin d'obtenir les nouveaux scopes.
+Déployer et configurer l'Edge Function :
 
-## 5. Configurer la synchronisation automatique
+```bash
+npx supabase secrets set RESEND_API_KEY=... RESEND_WEBHOOK_SECRET=...
+npx supabase secrets set AI_API_KEY=... AI_BASE_URL=https://api.imole.app/v1
+npx supabase secrets set AI_AUTH_HEADER=Authorization AI_AUTH_PREFIX=Bearer
+npx supabase secrets set AI_ANALYSIS_MODEL=gpt-4o-mini
+npx supabase functions deploy resend-inbound
+```
+
+Les variables `SUPABASE_URL` et `SUPABASE_SERVICE_ROLE_KEY` sont fournies automatiquement aux Edge Functions déployées.
+
+Configurer également Resend comme SMTP personnalisé dans Supabase Auth afin de fiabiliser les confirmations d'inscription.
+
+## 5. Synchronisation Gmail historique (optionnelle)
 
 Le endpoint suivant est protege par `CRON_SECRET` :
 
@@ -104,15 +121,16 @@ Le fichier `vercel.json` demande une execution quotidienne a 03:00 UTC, compatib
 Apres demarrage de l'application :
 
 1. Creer un compte ou se connecter.
-2. Connecter Gmail depuis `Parametres`.
-3. Verifier la synchronisation initiale.
-4. Verifier l'analyse IA et la justification du score de risque.
-5. Tester les listes blanche et noire.
-6. Tester la recherche globale et les filtres de l'inbox.
-7. Tester archiver et signaler un e-mail.
-8. Generer puis envoyer une reponse IA.
-9. Modifier une preference et verifier sa persistance apres rechargement.
-10. Telecharger les exports CSV et JSON.
+2. Créer une adresse de transfert depuis `Parametres`.
+3. L'ajouter dans Gmail et vérifier que le code de confirmation apparaît.
+4. Activer le transfert Gmail et envoyer un message de test.
+5. Verifier l'analyse IA et la justification du score de risque.
+6. Tester les listes blanche et noire.
+7. Tester la recherche globale et les filtres de l'inbox.
+8. Vérifier que les actions Gmail indisponibles ne sont pas proposées pour un message transféré.
+9. Générer une suggestion de réponse IA sans envoi direct.
+10. Modifier une preference et verifier sa persistance apres rechargement.
+11. Telecharger les exports CSV et JSON.
 
 ## 7. Commandes de validation
 
@@ -128,7 +146,7 @@ Le build peut encore signaler un bundle client superieur a 500 Ko. Ce warning n'
 
 ## 8. Deploiement
 
-- Verifier que le runtime cible correspond au fournisseur choisi : le build Nitro actuel cible Cloudflare, tandis qu'un `vercel.json` est present.
+- Le build Nitro cible Vercel, conformément à `vercel.json`.
 - Definir toutes les variables secretes dans la plateforme de deploiement, pas dans le depot.
 - Appliquer la migration avant la mise en production.
-- Tester OAuth et le cron en production avec l'URL publique finale.
+- Tester le webhook Resend et le cron en production avec l'URL publique finale.

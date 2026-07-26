@@ -19,7 +19,7 @@ export default defineConfig({
         },
       },
     }),
-    nitro({ defaultPreset: "cloudflare-module" }),
+    nitro({ defaultPreset: "vercel" }),
     react(),
   ],
   server: {

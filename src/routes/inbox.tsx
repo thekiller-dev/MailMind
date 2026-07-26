@@ -1,6 +1,14 @@
 import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Archive, Flag, Inbox as InboxIcon, Reply, ShieldCheck, Sparkles } from "lucide-react";
+import {
+  Archive,
+  Copy,
+  Flag,
+  Inbox as InboxIcon,
+  Reply,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
 import { AppShell, EmptyState } from "@/components/AppShell";
 import { useEmails, type DbEmail } from "@/lib/data-hooks";
 import { archiveEmail, reportEmail, sendEmailReply } from "@/lib/gmail.functions";
@@ -137,6 +145,7 @@ function EmailDetail({ email, onClose }: { email: DbEmail; onClose: () => void }
     ? (email.entities as { type: string; value: string }[])
     : [];
   const risk = email.risk_score ?? 0;
+  const isForwarded = email.provider_message_id?.startsWith("resend:") ?? false;
   const archive = useServerFn(archiveEmail);
   const report = useServerFn(reportEmail);
   const generate = useServerFn(generateEmailReply);
@@ -199,6 +208,11 @@ function EmailDetail({ email, onClose }: { email: DbEmail; onClose: () => void }
     }
   }
 
+  async function handleCopyReply() {
+    await navigator.clipboard.writeText(reply);
+    toast.success("Réponse copiée. Vous pouvez la coller dans Gmail.");
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex justify-end bg-background/60 backdrop-blur-sm"
@@ -235,18 +249,22 @@ function EmailDetail({ email, onClose }: { email: DbEmail; onClose: () => void }
                 onClick={handleGenerate}
                 disabled={pending !== null}
               />
-              <IconButton
-                icon={Archive}
-                label="Archiver"
-                onClick={handleArchive}
-                disabled={pending !== null}
-              />
-              <IconButton
-                icon={Flag}
-                label="Signaler"
-                onClick={handleReport}
-                disabled={pending !== null}
-              />
+              {!isForwarded && (
+                <>
+                  <IconButton
+                    icon={Archive}
+                    label="Archiver"
+                    onClick={handleArchive}
+                    disabled={pending !== null}
+                  />
+                  <IconButton
+                    icon={Flag}
+                    label="Signaler"
+                    onClick={handleReport}
+                    disabled={pending !== null}
+                  />
+                </>
+              )}
             </div>
           </div>
           <div className="px-6 py-5 sm:px-8 sm:py-6">
@@ -305,11 +323,12 @@ function EmailDetail({ email, onClose }: { email: DbEmail; onClose: () => void }
                 />
                 <div className="flex gap-2">
                   <button
-                    onClick={handleSend}
+                    onClick={isForwarded ? handleCopyReply : handleSend}
                     disabled={pending !== null || !reply.trim()}
                     className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-foreground py-2.5 text-xs font-semibold text-background disabled:opacity-50"
                   >
-                    Envoyer
+                    {isForwarded && <Copy className="size-3.5" />}
+                    {isForwarded ? "Copier pour Gmail" : "Envoyer"}
                   </button>
                   <button
                     onClick={() => setReply("")}
