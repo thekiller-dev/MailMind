@@ -26,18 +26,6 @@ export function SiteNav() {
           <Link to="/" hash="security" className="transition-colors hover:text-foreground">
             Sécurité
           </Link>
-          <Link to="/" hash="pipeline" className="transition-colors hover:text-foreground">
-            Pipeline
-          </Link>
-          <Link to="/pricing" className="transition-colors hover:text-foreground">
-            Tarifs
-          </Link>
-          <Link to="/connect-email" className="transition-colors hover:text-foreground">
-            Connecter un e-mail
-          </Link>
-          <Link to="/" hash="faq" className="transition-colors hover:text-foreground">
-            FAQ
-          </Link>
         </div>
         <div className="flex items-center gap-2">
           <div className="hidden sm:block">
@@ -71,10 +59,6 @@ export function SiteNav() {
             { to: "/", hash: "features", label: "Fonctionnalités" },
             { to: "/", hash: "use-cases", label: "Cas d'usage" },
             { to: "/", hash: "security", label: "Sécurité & RGPD" },
-            { to: "/", hash: "pipeline", label: "Pipeline IA" },
-            { to: "/pricing", label: "Tarifs" },
-            { to: "/connect-email", label: "Connecter un e-mail" },
-            { to: "/", hash: "faq", label: "FAQ" },
           ].map((i) => (
             <Link
               key={i.label}
