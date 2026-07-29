@@ -2,9 +2,24 @@
   "name": "MailMind",
   "short_name": "MailMind",
   "description": "Assistant intelligent pour votre boîte de réception.",
-  "start_url": "/",
+  "start_url": "/?source=pwa",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#080e16",
-  "theme_color": "#080e16",
-  "icons": [{ "src": "/mailmind-mark.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+  "orientation": "any",
+  "background_color": "#f7fafc",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "128x128",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/mailmind-mark.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
 }

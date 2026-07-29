@@ -9,6 +9,7 @@ import {
 } from "@tanstack/react-router";
 import { type ReactNode } from "react";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { PwaRegistration } from "@/components/PwaRegistration";
 import { Toaster } from "sonner";
 
 import appCss from "../styles.css?url";
@@ -95,7 +96,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     links: [
       { rel: "stylesheet", href: appCss },
       { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
-      { rel: "apple-touch-icon", href: "/mailmind-mark.svg" },
+      { rel: "apple-touch-icon", href: "/favicon.svg" },
       { rel: "manifest", href: "/site.webmanifest" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
@@ -120,6 +121,7 @@ function RootShell({ children }: { children: ReactNode }) {
       <body>
         <ThemeProvider>
           {children}
+          <PwaRegistration />
           <Toaster theme="system" position="top-right" richColors />
         </ThemeProvider>
         <Scripts />

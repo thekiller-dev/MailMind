@@ -1,6 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
-  <defs><linearGradient id="bg" x1="15" y1="8" x2="113" y2="120" gradientUnits="userSpaceOnUse"><stop stop-color="#182b3c"/><stop offset="1" stop-color="#080e16"/></linearGradient><linearGradient id="line" x1="25" y1="30" x2="103" y2="98" gradientUnits="userSpaceOnUse"><stop stop-color="#67e8f9"/><stop offset="1" stop-color="#a78bfa"/></linearGradient></defs>
-  <rect width="128" height="128" rx="32" fill="url(#bg)"/>
-  <path d="M28 64a36 36 0 0 1 12-27M100 64a36 36 0 0 0-12-27M28 64a36 36 0 0 0 12 27M100 64a36 36 0 0 1-12 27" fill="none" stroke="url(#line)" stroke-width="4" stroke-linecap="round" opacity=".8"/>
-  <circle cx="64" cy="64" r="25" fill="#f8fafc"/><path d="m46 55 18 14 18-14v20a4 4 0 0 1-4 4H50a4 4 0 0 1-4-4V55Z" fill="#122333"/><path d="m46 55 18 14 18-14" fill="none" stroke="url(#line)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="64" cy="64" r="4" fill="#22d3ee"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+  <title id="title">MailMind</title>
+  <defs>
+    <linearGradient id="brand" x1="16" y1="12" x2="112" y2="116" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2563eb"/>
+      <stop offset="1" stop-color="#0f766e"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="32" fill="url(#brand)"/>
+  <path d="M30 50 64 76l34-26v36a10 10 0 0 1-10 10H40a10 10 0 0 1-10-10V50Z" fill="#fff"/>
+  <path d="m30 50 34 25 34-25" fill="none" stroke="#dbeafe" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="64" cy="64" r="9" fill="#14b8a6"/>
 </svg>
