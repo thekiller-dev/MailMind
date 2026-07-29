@@ -1,4 +1,4 @@
-import { createFileRoute, useSearch } from "@tanstack/react-router";
+import { createFileRoute, Link, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
   CheckCircle2,
@@ -7,14 +7,21 @@ import {
   ExternalLink,
   Loader2,
   Mail,
+  Send,
   RefreshCw,
   Trash2,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { ProviderIcon } from "@/components/ProviderIcons";
 import { useAccounts, useEmails, useUser, useUserSettings } from "@/lib/data-hooks";
-import { disconnectAccount, syncMyAccount } from "@/lib/gmail.functions";
+import { disconnectAccount, getGmailAuthUrl, syncMyAccount } from "@/lib/gmail.functions";
 import { createForwardingInbox, getForwardingInbox } from "@/lib/forwarding.functions";
+import {
+  createTelegramLink,
+  getTelegramConnection,
+  unlinkTelegram,
+  updateTelegramPreferences,
+} from "@/lib/telegram.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -94,35 +101,45 @@ function Card({
 function AccountsTab() {
   const { accounts, loading } = useAccounts();
   const { user } = useUser();
+  const connectGmail = useServerFn(getGmailAuthUrl);
   const sync = useServerFn(syncMyAccount);
   const disconnect = useServerFn(disconnectAccount);
   const getInbox = useServerFn(getForwardingInbox);
   const createInbox = useServerFn(createForwardingInbox);
   const [pending, setPending] = useState<string | null>(null);
   const [sourceEmail, setSourceEmail] = useState("");
-  const [inbox, setInbox] = useState<Awaited<ReturnType<typeof getInbox>> | null>(null);
+  const [inboxes, setInboxes] = useState<Awaited<ReturnType<typeof getInbox>>>([]);
 
   useEffect(() => {
     if (!sourceEmail && user?.email) setSourceEmail(user.email);
   }, [sourceEmail, user?.email]);
 
   useEffect(() => {
-    if (!accounts.some((account) => account.provider === "forwarding")) return;
     void getInbox()
       .then((result) => {
-        if (result) {
-          setInbox(result);
-          setSourceEmail(result.sourceEmail);
-        }
+        setInboxes(result);
       })
       .catch(() => undefined);
   }, [accounts, getInbox]);
+
+  async function setupGmail() {
+    setPending("google");
+    try {
+      const result = await connectGmail({ data: { origin: window.location.origin } });
+      window.location.assign(result.url);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Connexion Google impossible");
+      setPending(null);
+    }
+  }
 
   async function setupForwarding() {
     setPending("forwarding");
     try {
       const result = await createInbox({ data: { sourceEmail } });
-      setInbox(result);
+      setInboxes((current) =>
+        current.some((inbox) => inbox.id === result.id) ? current : [...current, result],
+      );
       toast.success("Adresse MailMind créée.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Création impossible");
@@ -168,77 +185,51 @@ function AccountsTab() {
     >
       <div className="space-y-3">
         {loading && <p className="text-xs text-muted-foreground">Chargement…</p>}
-        {accounts.map((a) => (
-          <div key={a.id} className="flex items-center gap-3 rounded-xl glass-subtle p-4">
-            <ProviderIcon provider={a.provider} className="size-8" />
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold">{a.display_name ?? a.email}</p>
-              <p className="truncate font-mono text-[11px] text-muted-foreground">
-                {a.email} ·{" "}
-                {a.last_synced_at
-                  ? `sync ${new Date(a.last_synced_at).toLocaleString("fr-FR")}`
-                  : "jamais synchronisé"}
-                {a.status !== "connected" && ` · ${a.status}`}
-              </p>
-            </div>
-            {a.provider === "google" && (
+        {accounts
+          .filter((account) => account.provider !== "forwarding")
+          .map((a) => (
+            <div key={a.id} className="flex items-center gap-3 rounded-xl glass-subtle p-4">
+              <ProviderIcon provider={a.provider} className="size-8" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold">{a.display_name ?? a.email}</p>
+                <p className="truncate font-mono text-[11px] text-muted-foreground">
+                  {a.email} ·{" "}
+                  {a.last_synced_at
+                    ? `sync ${new Date(a.last_synced_at).toLocaleString("fr-FR")}`
+                    : "jamais synchronisé"}
+                  {a.status !== "connected" && ` · ${a.status}`}
+                </p>
+              </div>
+              {a.provider === "google" && (
+                <button
+                  onClick={() => handleSync(a.id)}
+                  disabled={pending === a.id}
+                  title="Synchroniser"
+                  className="grid size-9 place-items-center rounded-md glass-subtle text-muted-foreground hover:text-foreground disabled:opacity-40"
+                >
+                  {pending === a.id ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="size-4" />
+                  )}
+                </button>
+              )}
               <button
-                onClick={() => handleSync(a.id)}
+                onClick={() => handleDisconnect(a.id)}
                 disabled={pending === a.id}
-                title="Synchroniser"
-                className="grid size-9 place-items-center rounded-md glass-subtle text-muted-foreground hover:text-foreground disabled:opacity-40"
+                className="grid size-9 place-items-center rounded-md glass-subtle text-muted-foreground hover:bg-danger/10 hover:text-danger disabled:opacity-40"
               >
-                {pending === a.id ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="size-4" />
-                )}
-              </button>
-            )}
-            <button
-              onClick={() => handleDisconnect(a.id)}
-              disabled={pending === a.id}
-              className="grid size-9 place-items-center rounded-md glass-subtle text-muted-foreground hover:bg-danger/10 hover:text-danger disabled:opacity-40"
-            >
-              <Trash2 className="size-4" />
-            </button>
-          </div>
-        ))}
-
-        {!inbox ? (
-          <div className="rounded-xl border border-dashed border-border p-4">
-            <label className="text-xs font-medium" htmlFor="forwarding-source-email">
-              Adresse Gmail à analyser
-            </label>
-            <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-              <input
-                id="forwarding-source-email"
-                type="email"
-                value={sourceEmail}
-                onChange={(event) => setSourceEmail(event.target.value)}
-                placeholder="vous@gmail.com"
-                className="h-10 flex-1 rounded-md border border-border bg-background px-3 text-sm"
-              />
-              <button
-                onClick={setupForwarding}
-                disabled={pending === "forwarding" || !sourceEmail}
-                className="flex h-10 items-center justify-center gap-2 rounded-md bg-foreground px-4 text-sm font-semibold text-background disabled:opacity-50"
-              >
-                {pending === "forwarding" ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Mail className="size-4" />
-                )}
-                Créer mon adresse
+                <Trash2 className="size-4" />
               </button>
             </div>
-          </div>
-        ) : (
-          <div className="rounded-xl border border-border bg-background/40 p-4">
+          ))}
+
+        {inboxes.map((inbox) => (
+          <div key={inbox.id} className="rounded-xl border border-border bg-background/40 p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <p className="text-xs font-medium text-muted-foreground">
-                  Votre adresse de transfert privée
+                  Transfert Gmail · {inbox.sourceEmail}
                 </p>
                 <p className="mt-1 break-all font-mono text-sm font-semibold">{inbox.address}</p>
               </div>
@@ -295,7 +286,56 @@ function AccountsTab() {
               </p>
             )}
           </div>
-        )}
+        ))}
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <button
+            onClick={setupGmail}
+            disabled={pending === "google"}
+            className="flex h-11 items-center justify-center gap-2 rounded-xl bg-foreground px-4 text-sm font-semibold text-background disabled:opacity-50"
+          >
+            {pending === "google" ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Mail className="size-4" />
+            )}
+            Ajouter un compte Gmail
+          </button>
+          <Link
+            to="/connect-email"
+            className="flex h-11 items-center justify-center rounded-xl border border-border px-4 text-sm font-semibold hover:bg-surface-muted"
+          >
+            Comment connecter un e-mail
+          </Link>
+        </div>
+
+        <div className="rounded-xl border border-dashed border-border p-4">
+          <label className="text-xs font-medium" htmlFor="forwarding-source-email">
+            Ajouter une autre adresse de transfert Gmail
+          </label>
+          <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+            <input
+              id="forwarding-source-email"
+              type="email"
+              value={sourceEmail}
+              onChange={(event) => setSourceEmail(event.target.value)}
+              placeholder="autre-compte@gmail.com"
+              className="h-10 flex-1 rounded-md border border-border bg-background px-3 text-sm"
+            />
+            <button
+              onClick={setupForwarding}
+              disabled={pending === "forwarding" || !sourceEmail}
+              className="flex h-10 items-center justify-center gap-2 rounded-md bg-foreground px-4 text-sm font-semibold text-background disabled:opacity-50"
+            >
+              {pending === "forwarding" ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Mail className="size-4" />
+              )}
+              Ajouter le transfert
+            </button>
+          </div>
+        </div>
       </div>
     </Card>
   );
@@ -373,6 +413,7 @@ function NotificationsTab() {
   if (loading) return <p className="text-sm text-muted-foreground">Chargement…</p>;
   return (
     <>
+      <TelegramCard />
       <Card title="Canaux">
         <Toggle
           label="Notifications push"
@@ -408,6 +449,150 @@ function NotificationsTab() {
         </div>
       </Card>
     </>
+  );
+}
+
+function TelegramCard() {
+  const getConnection = useServerFn(getTelegramConnection);
+  const createLink = useServerFn(createTelegramLink);
+  const updatePreferences = useServerFn(updateTelegramPreferences);
+  const unlink = useServerFn(unlinkTelegram);
+  const [connection, setConnection] = useState<Awaited<ReturnType<typeof getConnection>> | null>(
+    null,
+  );
+  const [link, setLink] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    void getConnection()
+      .then(setConnection)
+      .catch(() => setConnection(null));
+  }, [getConnection]);
+
+  async function generateLink() {
+    setPending(true);
+    try {
+      const result = await createLink();
+      setLink(result.botLink);
+      toast.success("Lien Telegram généré pour 15 minutes.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Telegram n'est pas disponible");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function changePreference(
+    field: "urgentAlerts" | "phishingAlerts" | "summaryDigest" | "commandAccess",
+    value: boolean,
+  ) {
+    try {
+      const next = await updatePreferences({ data: { [field]: value } });
+      setConnection(next);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Mise à jour impossible");
+    }
+  }
+
+  async function removeTelegram() {
+    if (!confirm("Retirer définitivement ce chat Telegram de MailMind ?")) return;
+    setPending(true);
+    try {
+      await unlink();
+      setConnection(null);
+      setLink(null);
+      toast.success("Telegram a été déconnecté.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Déconnexion impossible");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  const isLinked = connection?.status === "linked";
+  return (
+    <Card
+      title="Telegram"
+      desc="Recevez les alertes urgentes, les alertes phishing et vos résumés. Les commandes restent limitées à votre compte."
+    >
+      {!isLinked ? (
+        <>
+          <p className="text-sm text-muted-foreground">
+            Générez un lien, ouvrez-le dans Telegram et appuyez sur Démarrer. Le lien expire après
+            15 minutes.
+          </p>
+          <button
+            type="button"
+            onClick={generateLink}
+            disabled={pending}
+            className="mt-4 inline-flex items-center gap-2 rounded-md bg-foreground px-4 py-2 text-sm font-semibold text-background disabled:opacity-50"
+          >
+            <Send className="size-4" />
+            {pending ? "Génération…" : "Lier Telegram"}
+          </button>
+          {link && (
+            <div className="mt-4 rounded-lg border border-border bg-background p-3">
+              <a
+                href={link}
+                target="_blank"
+                rel="noreferrer"
+                className="break-all text-xs font-semibold text-primary hover:underline"
+              >
+                Ouvrir le lien Telegram
+              </a>
+              <button
+                type="button"
+                onClick={() => void navigator.clipboard.writeText(link)}
+                className="mt-2 block text-xs text-muted-foreground hover:text-foreground"
+              >
+                Copier le lien
+              </button>
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-semibold">
+              Connecté{connection.username ? ` à @${connection.username}` : ""}
+            </p>
+            <button
+              type="button"
+              onClick={() => void removeTelegram()}
+              disabled={pending}
+              className="text-xs font-semibold text-danger hover:underline disabled:opacity-50"
+            >
+              Déconnecter
+            </button>
+          </div>
+          <div className="mt-4 space-y-1">
+            <Toggle
+              label="Alertes urgentes"
+              on={connection.urgent_alerts}
+              onChange={(value) => void changePreference("urgentAlerts", value)}
+            />
+            <Toggle
+              label="Alertes phishing et sécurité"
+              on={connection.phishing_alerts}
+              onChange={(value) => void changePreference("phishingAlerts", value)}
+            />
+            <Toggle
+              label="Digest quotidien des résumés"
+              on={connection.summary_digest}
+              onChange={(value) => void changePreference("summaryDigest", value)}
+            />
+            <Toggle
+              label="Autoriser les commandes Telegram"
+              on={connection.command_access}
+              onChange={(value) => void changePreference("commandAccess", value)}
+            />
+          </div>
+          <p className="mt-4 text-xs text-muted-foreground">
+            Commandes : /help, /status, /digest, /alerts et /unlink.
+          </p>
+        </>
+      )}
+    </Card>
   );
 }
 

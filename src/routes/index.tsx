@@ -107,10 +107,10 @@ function ProductPurpose() {
         </div>
         <div className="text-sm leading-relaxed text-muted-foreground sm:text-base">
           <p>
-            MailMind est une application qui connecte votre compte Gmail via OAuth 2.0 pour vous
-            aider à comprendre et traiter vos e-mails. L’application synchronise les messages,
-            génère des résumés, les classe, détecte les signaux de risque et met en évidence les
-            actions importantes.
+            MailMind est un assistant qui vous aide à comprendre et traiter vos e-mails. Connectez
+            plusieurs comptes Gmail avec OAuth 2.0 ou utilisez un transfert privé sans donner accès
+            à votre compte Google. MailMind résume les messages, les classe, détecte les signaux de
+            risque et met en évidence les actions importantes.
           </p>
           <div className="mt-5 flex flex-wrap gap-2 font-mono text-[9px] uppercase tracking-wider">
             {[
@@ -118,6 +118,8 @@ function ProductPurpose() {
               "Classification",
               "Détection des risques",
               "Actions à traiter",
+              "Plusieurs comptes",
+              "Alertes Telegram",
             ].map((item) => (
               <span
                 key={item}
@@ -188,10 +190,10 @@ function Hero() {
             <ArrowUpRight className="size-4 transition-transform group-hover:rotate-45" />
           </Link>
           <Link
-            to="/pricing"
+            to="/connect-email"
             className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full glass px-7 font-semibold text-foreground transition-colors sm:w-auto"
           >
-            Voir les tarifs
+            Comment connecter un e-mail
           </Link>
         </div>
         <div className="hero-meta mt-8 flex items-center justify-center gap-4 opacity-70">

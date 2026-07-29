@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { Webhook } from "npm:svix";
+import { notifyEmailAnalysis } from "../_shared/telegram.ts";
 
 type ResendEvent = {
   type: string;
@@ -143,6 +144,8 @@ async function analyzeEmail(input: { sender: string; subject: string; body: stri
 
 Deno.serve(async (request) => {
   if (request.method !== "POST") return new Response("method not allowed", { status: 405 });
+  const contentLength = Number(request.headers.get("content-length") ?? 0);
+  if (contentLength > 512_000) return json({ ok: false, error: "payload_too_large" }, 413);
 
   try {
     const payload = await request.text();
@@ -245,7 +248,22 @@ Deno.serve(async (request) => {
           subject: email.subject,
           body,
         });
-        if (analysis) await supabase.from("emails").update(analysis).eq("id", emailId);
+        if (analysis && emailId) {
+          await supabase.from("emails").update(analysis).eq("id", emailId);
+          try {
+            await notifyEmailAnalysis(supabase, account.user_id, {
+              id: emailId,
+              sender: email.from,
+              subject: email.subject,
+              summary: analysis.summary,
+              category: analysis.category,
+              risk_score: analysis.risk_score,
+              risk_reason: analysis.risk_reason,
+            });
+          } catch (notificationError) {
+            console.error("telegram notification failed", notificationError);
+          }
+        }
       } catch (error) {
         console.error("inbound analysis failed", error);
       }

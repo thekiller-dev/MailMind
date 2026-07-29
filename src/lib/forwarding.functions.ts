@@ -40,9 +40,9 @@ export const getForwardingInbox = createServerFn({ method: "GET" })
       )
       .eq("user_id", context.userId)
       .eq("provider", "forwarding")
-      .maybeSingle();
+      .order("created_at", { ascending: true });
     if (error) throw error;
-    return data ? publicInbox(data) : null;
+    return (data ?? []).map(publicInbox);
   });
 
 export const createForwardingInbox = createServerFn({ method: "POST" })
@@ -59,23 +59,10 @@ export const createForwardingInbox = createServerFn({ method: "POST" })
       )
       .eq("user_id", context.userId)
       .eq("provider", "forwarding")
+      .eq("email", data.sourceEmail)
       .maybeSingle();
     if (existingError) throw existingError;
-
-    if (existing) {
-      if (existing.email === data.sourceEmail) return publicInbox(existing);
-      const { data: updated, error } = await supabaseAdmin
-        .from("email_accounts")
-        .update({ email: data.sourceEmail, display_name: "Transfert Gmail" })
-        .eq("id", existing.id)
-        .eq("user_id", context.userId)
-        .select(
-          "id,email,status,inbound_alias,forwarding_confirmation_code,forwarding_confirmation_url,last_forwarded_at",
-        )
-        .single();
-      if (error) throw error;
-      return publicInbox(updated);
-    }
+    if (existing) return publicInbox(existing);
 
     const alias = createAlias();
     const { data: created, error } = await supabaseAdmin

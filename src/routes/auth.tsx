@@ -16,7 +16,7 @@ import {
   Zap,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { GmailIcon } from "@/components/ProviderIcons";
+import { GoogleIcon } from "@/components/ProviderIcons";
 import { Logo } from "@/components/SiteNav";
 import { toast } from "sonner";
 
@@ -200,11 +200,8 @@ function Auth() {
                   disabled={loading}
                   className="mt-8 flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-border bg-surface/70 text-sm font-semibold transition-all hover:border-foreground/20 hover:bg-surface-muted active:scale-[0.99] disabled:cursor-wait disabled:opacity-50"
                 >
-                  <span className="grid size-6 place-items-center rounded-md bg-white">
-                    <span className="font-bold text-sm text-[#4285f4]">G</span>
-                  </span>
+                  <GoogleIcon className="size-5" />
                   Continuer avec Google
-                  <GmailIcon className="ml-auto size-4" />
                 </button>
               )}
 

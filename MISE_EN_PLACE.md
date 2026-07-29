@@ -26,6 +26,9 @@ TOKEN_ENCRYPTION_KEY=
 CRON_SECRET=
 RESEND_API_KEY=
 RESEND_WEBHOOK_SECRET=
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_BOT_USERNAME=
+TELEGRAM_WEBHOOK_SECRET=
 INBOUND_EMAIL_DOMAIN=mailmind.me
 APP_ORIGIN=https://www.mailmind.me
 APP_ORIGINS=http://localhost:5000,https://mailmind.me,https://www.mailmind.me
@@ -102,7 +105,47 @@ Les variables `SUPABASE_URL` et `SUPABASE_SERVICE_ROLE_KEY` sont fournies automa
 
 Configurer également Resend comme SMTP personnalisé dans Supabase Auth afin de fiabiliser les confirmations d'inscription.
 
-## 5. Synchronisation Gmail historique (optionnelle)
+## 5. Configurer Telegram
+
+Dans Telegram, ouvrir `@BotFather` :
+
+1. Exécuter `/newbot`.
+2. Choisir le nom et le username du bot, qui doit finir par `bot`.
+3. Conserver le token retourné uniquement dans les secrets Supabase/Vercel.
+4. Définir un secret aléatoire pour `TELEGRAM_WEBHOOK_SECRET`.
+
+Configurer les secrets Supabase :
+
+```bash
+npx supabase secrets set TELEGRAM_BOT_TOKEN=... TELEGRAM_BOT_USERNAME=...
+npx supabase secrets set TELEGRAM_WEBHOOK_SECRET=...
+```
+
+Déployer la fonction :
+
+```bash
+npx supabase functions deploy telegram-webhook --no-verify-jwt
+```
+
+Puis enregistrer le webhook Telegram, depuis une machine qui possède le token :
+
+```bash
+curl -X POST "https://api.telegram.org/bot<TOKEN>/setWebhook" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://udfkcqhuhqpunvlhgpdc.supabase.co/functions/v1/telegram-webhook","secret_token":"<TELEGRAM_WEBHOOK_SECRET>","allowed_updates":["message"]}'
+```
+
+Dans MailMind : Paramètres → Notifications → Telegram → Lier Telegram.
+Le lien est à usage unique et expire après 15 minutes.
+
+Commandes disponibles après liaison :
+`/help`, `/status`, `/digest`, `/alerts` et `/unlink`.
+
+Les alertes urgentes et phishing sont envoyées après analyse. Le digest est
+programmé à 08:00 UTC par Vercel Cron via `/api/public/hooks/telegram-digest`.
+Cette route exige `CRON_SECRET`.
+
+## 6. Synchronisation Gmail historique (optionnelle)
 
 Le endpoint suivant est protege par `CRON_SECRET` :
 
@@ -116,7 +159,7 @@ Le fichier `vercel.json` demande une execution quotidienne a 03:00 UTC, compatib
 - Le fournisseur de deployement active bien les cron jobs.
 - Le endpoint recoit `Authorization: Bearer <CRON_SECRET>` ou `x-cron-secret`.
 
-## 6. Verifier les fonctionnalites
+## 7. Verifier les fonctionnalites
 
 Apres demarrage de l'application :
 
@@ -131,8 +174,10 @@ Apres demarrage de l'application :
 9. Générer une suggestion de réponse IA sans envoi direct.
 10. Modifier une preference et verifier sa persistance apres rechargement.
 11. Telecharger les exports CSV et JSON.
+12. Lier Telegram puis tester `/status`, `/digest`, `/alerts` et `/unlink`.
+13. Envoyer un e-mail urgent ou phishing et vérifier l’alerte Telegram.
 
-## 7. Commandes de validation
+## 8. Commandes de validation
 
 ```bash
 pnpm install --frozen-lockfile
@@ -144,9 +189,10 @@ pnpm audit
 
 Le build peut encore signaler un bundle client superieur a 500 Ko. Ce warning n'empeche pas le build, mais devra etre traite plus tard avec un decoupage de code supplementaire.
 
-## 8. Deploiement
+## 9. Deploiement
 
 - Le build Nitro cible Vercel, conformément à `vercel.json`.
 - Definir toutes les variables secretes dans la plateforme de deploiement, pas dans le depot.
 - Appliquer la migration avant la mise en production.
 - Tester le webhook Resend et le cron en production avec l'URL publique finale.
+- Vérifier les secrets Telegram et les deux crons (`sync-emails`, `telegram-digest`).

@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ActionsRouteImport } from './routes/actions'
 import { Route as AlertsRouteImport } from './routes/alerts'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as ConnectEmailRouteImport } from './routes/connect-email'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as DpaRouteImport } from './routes/dpa'
 import { Route as InboxRouteImport } from './routes/inbox'
@@ -24,6 +25,7 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as ApiGmailCallbackRouteImport } from './routes/api/gmail/callback'
 import { Route as ApiPublicHooksSyncEmailsRouteImport } from './routes/api/public/hooks/sync-emails'
+import { Route as ApiPublicHooksTelegramDigestRouteImport } from './routes/api/public/hooks/telegram-digest'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -43,6 +45,11 @@ const AlertsRoute = AlertsRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConnectEmailRoute = ConnectEmailRouteImport.update({
+  id: '/connect-email',
+  path: '/connect-email',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -101,12 +108,19 @@ const ApiPublicHooksSyncEmailsRoute =
     path: '/api/public/hooks/sync-emails',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksTelegramDigestRoute =
+  ApiPublicHooksTelegramDigestRouteImport.update({
+    id: '/api/public/hooks/telegram-digest',
+    path: '/api/public/hooks/telegram-digest',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/actions': typeof ActionsRoute
   '/alerts': typeof AlertsRoute
   '/auth': typeof AuthRoute
+  '/connect-email': typeof ConnectEmailRoute
   '/dashboard': typeof DashboardRoute
   '/dpa': typeof DpaRoute
   '/inbox': typeof InboxRoute
@@ -118,12 +132,14 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/api/gmail/callback': typeof ApiGmailCallbackRoute
   '/api/public/hooks/sync-emails': typeof ApiPublicHooksSyncEmailsRoute
+  '/api/public/hooks/telegram-digest': typeof ApiPublicHooksTelegramDigestRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/actions': typeof ActionsRoute
   '/alerts': typeof AlertsRoute
   '/auth': typeof AuthRoute
+  '/connect-email': typeof ConnectEmailRoute
   '/dashboard': typeof DashboardRoute
   '/dpa': typeof DpaRoute
   '/inbox': typeof InboxRoute
@@ -135,6 +151,7 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/api/gmail/callback': typeof ApiGmailCallbackRoute
   '/api/public/hooks/sync-emails': typeof ApiPublicHooksSyncEmailsRoute
+  '/api/public/hooks/telegram-digest': typeof ApiPublicHooksTelegramDigestRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -142,6 +159,7 @@ export interface FileRoutesById {
   '/actions': typeof ActionsRoute
   '/alerts': typeof AlertsRoute
   '/auth': typeof AuthRoute
+  '/connect-email': typeof ConnectEmailRoute
   '/dashboard': typeof DashboardRoute
   '/dpa': typeof DpaRoute
   '/inbox': typeof InboxRoute
@@ -153,6 +171,7 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/api/gmail/callback': typeof ApiGmailCallbackRoute
   '/api/public/hooks/sync-emails': typeof ApiPublicHooksSyncEmailsRoute
+  '/api/public/hooks/telegram-digest': typeof ApiPublicHooksTelegramDigestRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -161,6 +180,7 @@ export interface FileRouteTypes {
     | '/actions'
     | '/alerts'
     | '/auth'
+    | '/connect-email'
     | '/dashboard'
     | '/dpa'
     | '/inbox'
@@ -172,12 +192,14 @@ export interface FileRouteTypes {
     | '/terms'
     | '/api/gmail/callback'
     | '/api/public/hooks/sync-emails'
+    | '/api/public/hooks/telegram-digest'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/actions'
     | '/alerts'
     | '/auth'
+    | '/connect-email'
     | '/dashboard'
     | '/dpa'
     | '/inbox'
@@ -189,12 +211,14 @@ export interface FileRouteTypes {
     | '/terms'
     | '/api/gmail/callback'
     | '/api/public/hooks/sync-emails'
+    | '/api/public/hooks/telegram-digest'
   id:
     | '__root__'
     | '/'
     | '/actions'
     | '/alerts'
     | '/auth'
+    | '/connect-email'
     | '/dashboard'
     | '/dpa'
     | '/inbox'
@@ -206,6 +230,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/api/gmail/callback'
     | '/api/public/hooks/sync-emails'
+    | '/api/public/hooks/telegram-digest'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -213,6 +238,7 @@ export interface RootRouteChildren {
   ActionsRoute: typeof ActionsRoute
   AlertsRoute: typeof AlertsRoute
   AuthRoute: typeof AuthRoute
+  ConnectEmailRoute: typeof ConnectEmailRoute
   DashboardRoute: typeof DashboardRoute
   DpaRoute: typeof DpaRoute
   InboxRoute: typeof InboxRoute
@@ -224,6 +250,7 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   ApiGmailCallbackRoute: typeof ApiGmailCallbackRoute
   ApiPublicHooksSyncEmailsRoute: typeof ApiPublicHooksSyncEmailsRoute
+  ApiPublicHooksTelegramDigestRoute: typeof ApiPublicHooksTelegramDigestRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -254,6 +281,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/connect-email': {
+      id: '/connect-email'
+      path: '/connect-email'
+      fullPath: '/connect-email'
+      preLoaderRoute: typeof ConnectEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -333,6 +367,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksSyncEmailsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/telegram-digest': {
+      id: '/api/public/hooks/telegram-digest'
+      path: '/api/public/hooks/telegram-digest'
+      fullPath: '/api/public/hooks/telegram-digest'
+      preLoaderRoute: typeof ApiPublicHooksTelegramDigestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -341,6 +382,7 @@ const rootRouteChildren: RootRouteChildren = {
   ActionsRoute: ActionsRoute,
   AlertsRoute: AlertsRoute,
   AuthRoute: AuthRoute,
+  ConnectEmailRoute: ConnectEmailRoute,
   DashboardRoute: DashboardRoute,
   DpaRoute: DpaRoute,
   InboxRoute: InboxRoute,
@@ -352,6 +394,7 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   ApiGmailCallbackRoute: ApiGmailCallbackRoute,
   ApiPublicHooksSyncEmailsRoute: ApiPublicHooksSyncEmailsRoute,
+  ApiPublicHooksTelegramDigestRoute: ApiPublicHooksTelegramDigestRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
+import { MailMindIcon } from "./ProviderIcons";
 import { ThemeToggle } from "./ThemeToggle";
 
 export function SiteNav() {
@@ -30,6 +31,9 @@ export function SiteNav() {
           </Link>
           <Link to="/pricing" className="transition-colors hover:text-foreground">
             Tarifs
+          </Link>
+          <Link to="/connect-email" className="transition-colors hover:text-foreground">
+            Connecter un e-mail
           </Link>
           <Link to="/" hash="faq" className="transition-colors hover:text-foreground">
             FAQ
@@ -69,6 +73,7 @@ export function SiteNav() {
             { to: "/", hash: "security", label: "Sécurité & RGPD" },
             { to: "/", hash: "pipeline", label: "Pipeline IA" },
             { to: "/pricing", label: "Tarifs" },
+            { to: "/connect-email", label: "Connecter un e-mail" },
             { to: "/", hash: "faq", label: "FAQ" },
           ].map((i) => (
             <Link
@@ -94,9 +99,7 @@ export function SiteNav() {
 }
 
 export function Logo() {
-  return (
-    <img src="/mailmind-mark.svg" alt="" className="size-8 rounded-lg" width="32" height="32" />
-  );
+  return <MailMindIcon className="size-8" />;
 }
 
 export function SiteFooter() {

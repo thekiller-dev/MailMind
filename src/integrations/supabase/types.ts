@@ -8,6 +8,84 @@ export type Database = {
   };
   public: {
     Tables: {
+      telegram_connections: {
+        Row: {
+          chat_id: number | null;
+          command_access: boolean;
+          created_at: string;
+          first_name: string | null;
+          id: string;
+          link_token_expires_at: string | null;
+          link_token_hash: string | null;
+          linked_at: string | null;
+          last_seen_at: string | null;
+          phishing_alerts: boolean;
+          status: string;
+          summary_digest: boolean;
+          updated_at: string;
+          urgent_alerts: boolean;
+          user_id: string;
+          username: string | null;
+        };
+        Insert: {
+          chat_id?: number | null;
+          command_access?: boolean;
+          created_at?: string;
+          first_name?: string | null;
+          id?: string;
+          link_token_expires_at?: string | null;
+          link_token_hash?: string | null;
+          linked_at?: string | null;
+          last_seen_at?: string | null;
+          phishing_alerts?: boolean;
+          status?: string;
+          summary_digest?: boolean;
+          updated_at?: string;
+          urgent_alerts?: boolean;
+          user_id: string;
+          username?: string | null;
+        };
+        Update: {
+          chat_id?: number | null;
+          command_access?: boolean;
+          created_at?: string;
+          first_name?: string | null;
+          id?: string;
+          link_token_expires_at?: string | null;
+          link_token_hash?: string | null;
+          linked_at?: string | null;
+          last_seen_at?: string | null;
+          phishing_alerts?: boolean;
+          status?: string;
+          summary_digest?: boolean;
+          updated_at?: string;
+          urgent_alerts?: boolean;
+          user_id?: string;
+          username?: string | null;
+        };
+        Relationships: [];
+      };
+      telegram_delivery_events: {
+        Row: {
+          chat_id: number;
+          created_at: string;
+          event_id: string;
+          event_type: string;
+        };
+        Insert: {
+          chat_id: number;
+          created_at?: string;
+          event_id: string;
+          event_type: string;
+        };
+        Update: {
+          chat_id?: number;
+          created_at?: string;
+          event_id?: string;
+          event_type?: string;
+        };
+        Relationships: [];
+      };
       email_accounts: {
         Row: {
           access_token: string | null;
