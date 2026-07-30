@@ -6,11 +6,13 @@ import {
   useRouter,
   HeadContent,
   Scripts,
+  useRouterState,
 } from "@tanstack/react-router";
-import { type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { PwaRegistration } from "@/components/PwaRegistration";
 import { Toaster } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 import appCss from "../styles.css?url";
 
@@ -135,7 +137,27 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Outlet />
+      <PublicRouteGuard>
+        <Outlet />
+      </PublicRouteGuard>
     </QueryClientProvider>
   );
+}
+
+function PublicRouteGuard({ children }: { children: ReactNode }) {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const navigate = useRouter().navigate;
+
+  useEffect(() => {
+    if (pathname !== "/" && pathname !== "/auth") return;
+    let active = true;
+    void supabase.auth.getSession().then(({ data }) => {
+      if (active && data.session) navigate({ to: "/dashboard", replace: true });
+    });
+    return () => {
+      active = false;
+    };
+  }, [navigate, pathname]);
+
+  return children;
 }

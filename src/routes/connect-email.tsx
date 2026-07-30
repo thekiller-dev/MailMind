@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, CheckCircle2, Forward, Globe2, ShieldCheck } from "lucide-react";
 import { SiteFooter, SiteNav } from "@/components/SiteNav";
+import { useUser } from "@/lib/data-hooks";
 
 export const Route = createFileRoute("/connect-email")({
   head: () => ({
@@ -17,6 +18,8 @@ export const Route = createFileRoute("/connect-email")({
 });
 
 function ConnectEmailPage() {
+  const { user } = useUser();
+
   return (
     <>
       <SiteNav />
@@ -77,17 +80,21 @@ function ConnectEmailPage() {
         </section>
 
         <div className="mt-10 flex flex-col gap-3 sm:flex-row">
-          <Link
-            to="/auth"
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-foreground px-6 text-sm font-semibold text-background"
-          >
-            Créer un compte <ArrowRight className="size-4" />
-          </Link>
+          {!user && (
+            <Link
+              to="/auth"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-foreground px-6 text-sm font-semibold text-background"
+            >
+              Créer un compte <ArrowRight className="size-4" />
+            </Link>
+          )}
           <Link
             to="/settings"
-            className="inline-flex h-11 items-center justify-center rounded-full border border-border px-6 text-sm font-semibold hover:bg-surface-muted"
+            className={`inline-flex h-11 items-center justify-center rounded-full border border-border px-6 text-sm font-semibold hover:bg-surface-muted ${
+              user ? "bg-foreground text-background" : ""
+            }`}
           >
-            Voir les Paramètres
+            {user ? "Retour aux Paramètres" : "Voir les Paramètres"}
           </Link>
         </div>
       </main>

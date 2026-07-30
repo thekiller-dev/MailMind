@@ -102,7 +102,11 @@ export const Route = createFileRoute("/api/gmail/callback")({
           });
         } catch (e) {
           console.error("oauth callback error", e);
-          return back(`error:${e instanceof Error ? e.message : "unknown"}`);
+          const message = e instanceof Error ? e.message : "unknown";
+          if (message.toLowerCase().includes("redirect_uri_mismatch")) {
+            return back("error:redirect_uri_mismatch");
+          }
+          return back(`error:${message}`);
         }
       },
     },

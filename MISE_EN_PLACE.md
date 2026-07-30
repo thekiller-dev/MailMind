@@ -44,6 +44,23 @@ GMAIL_SYNC_QUERY=in:inbox newer_than:14d
 - Garder `.env` hors du depot Git. `.env.example` peut etre versionne.
 - Le fichier `.env` historique du projet etait deja suivi par Git : verifier son historique et retirer toute cle sensible si necessaire.
 
+### Callback Gmail OAuth
+
+Dans Google Cloud Console → APIs et services → Identifiants → Client OAuth Web,
+ajouter exactement cette URI de redirection autorisée en production :
+
+```text
+https://www.mailmind.me/api/gmail/callback
+```
+
+Pour le développement local, ajouter également :
+
+```text
+http://localhost:5000/api/gmail/callback
+```
+
+`APP_ORIGIN` doit rester égal à `https://www.mailmind.me` en production.
+
 ## 2. Harmoniser Supabase
 
 Les valeurs suivantes doivent appartenir au meme projet Supabase :

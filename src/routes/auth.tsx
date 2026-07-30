@@ -108,6 +108,7 @@ function Auth() {
           },
         });
         if (error) throw error;
+        window.localStorage.setItem("mailmind:first-email-guide", "1");
         if (!data.session) {
           toast.success("Compte créé. Vérifiez votre e-mail pour confirmer l'inscription.");
           changeMode("signin");

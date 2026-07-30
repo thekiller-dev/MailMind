@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { AppShell, EmptyState } from "@/components/AppShell";
 import { ProviderIcon } from "@/components/ProviderIcons";
+import { TelegramMetricsChart } from "@/components/TelegramMetricsChart";
 import { useAccounts, useEmails } from "@/lib/data-hooks";
 import {
   Area,
@@ -185,6 +186,10 @@ function Dashboard() {
               </ResponsiveContainer>
             </div>
           </div>
+          <div className="rounded-3xl glass p-6 sm:p-8 lg:col-span-2">
+            <TelegramMetricsChart compact />
+          </div>
+
           <div className="rounded-3xl glass p-6 sm:p-8">
             <div className="mb-4 flex items-end justify-between">
               <div>
@@ -221,11 +226,14 @@ function Dashboard() {
                     </Pie>
                     <Tooltip
                       contentStyle={{
-                        background: "#0a0a0a",
-                        border: "1px solid #292929",
+                        background: "var(--card)",
+                        color: "var(--foreground)",
+                        border: "1px solid var(--border)",
                         borderRadius: 10,
                         fontSize: 11,
                       }}
+                      labelStyle={{ color: "var(--foreground)" }}
+                      itemStyle={{ color: "var(--foreground)" }}
                     />
                   </PieChart>
                 </ResponsiveContainer>

@@ -31,11 +31,19 @@ function resolveOrigin(requested: string): string {
   return normalizedRequested;
 }
 
+function resolveOAuthOrigin(requested: string): string {
+  const requestedUrl = new URL(requested);
+  if (requestedUrl.hostname === "localhost" || requestedUrl.hostname === "127.0.0.1") {
+    return resolveOrigin(requested);
+  }
+  return resolveOrigin(process.env.APP_ORIGIN ?? "https://www.mailmind.me");
+}
+
 export const getGmailAuthUrl = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((data: unknown) => z.object({ origin: z.string().url() }).parse(data))
   .handler(async ({ context, data }) => {
-    const origin = resolveOrigin(data.origin.replace(/\/$/, ""));
+    const origin = resolveOAuthOrigin(data.origin.replace(/\/$/, ""));
     const redirectUri = `${origin}/api/gmail/callback`;
     const state = signState({
       user_id: context.userId,
