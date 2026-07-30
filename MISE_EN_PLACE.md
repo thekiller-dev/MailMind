@@ -105,7 +105,26 @@ Les variables `SUPABASE_URL` et `SUPABASE_SERVICE_ROLE_KEY` sont fournies automa
 
 Configurer également Resend comme SMTP personnalisé dans Supabase Auth afin de fiabiliser les confirmations d'inscription.
 
-## 5. Configurer Telegram
+## 5. Personnaliser les e-mails Supabase Auth
+
+Les modèles MailMind sont disponibles dans `supabase/templates/` :
+
+- `confirmation.html` : confirmation d'inscription ;
+- `recovery.html` : réinitialisation du mot de passe ;
+- `invite.html` : invitation ;
+- `email-change.html` : changement d'adresse.
+
+Dans Supabase Dashboard :
+
+1. Ouvrir `Authentication` → `Email Templates`.
+2. Choisir le modèle à modifier.
+3. Copier le contenu du fichier HTML correspondant dans l'éditeur.
+4. Conserver les variables Supabase, notamment `{{ .ConfirmationURL }}`, `{{ .Email }}` et `{{ .NewEmail }}` selon le modèle.
+5. Enregistrer, puis envoyer un e-mail de test.
+
+Les modèles utilisent le branding clair MailMind et des boutons compatibles avec les clients e-mail. Les liens de confirmation ne doivent pas être remplacés par des URLs codées en dur.
+
+## 6. Configurer Telegram
 
 Dans Telegram, ouvrir `@BotFather` :
 
@@ -141,11 +160,14 @@ Le lien est à usage unique et expire après 15 minutes.
 Commandes disponibles après liaison :
 `/help`, `/status`, `/digest`, `/alerts` et `/unlink`.
 
-Les alertes urgentes et phishing sont envoyées après analyse. Le digest est
-programmé à 08:00 UTC par Vercel Cron via `/api/public/hooks/telegram-digest`.
-Cette route exige `CRON_SECRET`.
+Les alertes urgentes et phishing sont envoyées après analyse. Le digest Telegram
+est exécuté toutes les 15 minutes par Vercel Cron via
+`/api/public/hooks/telegram-digest`, puis envoyé selon l'heure et le fuseau
+configurés par chaque utilisateur. Cette route exige `CRON_SECRET`.
+Une fréquence de cron inférieure à la fréquence quotidienne peut nécessiter un
+plan Vercel compatible avec les cron jobs fréquents.
 
-## 6. Synchronisation Gmail historique (optionnelle)
+## 7. Synchronisation Gmail historique (optionnelle)
 
 Le endpoint suivant est protege par `CRON_SECRET` :
 
@@ -159,7 +181,7 @@ Le fichier `vercel.json` demande une execution quotidienne a 03:00 UTC, compatib
 - Le fournisseur de deployement active bien les cron jobs.
 - Le endpoint recoit `Authorization: Bearer <CRON_SECRET>` ou `x-cron-secret`.
 
-## 7. Verifier les fonctionnalites
+## 8. Verifier les fonctionnalites
 
 Apres demarrage de l'application :
 
@@ -177,7 +199,7 @@ Apres demarrage de l'application :
 12. Lier Telegram puis tester `/status`, `/digest`, `/alerts` et `/unlink`.
 13. Envoyer un e-mail urgent ou phishing et vérifier l’alerte Telegram.
 
-## 8. Commandes de validation
+## 9. Commandes de validation
 
 ```bash
 pnpm install --frozen-lockfile
@@ -189,7 +211,7 @@ pnpm audit
 
 Le build peut encore signaler un bundle client superieur a 500 Ko. Ce warning n'empeche pas le build, mais devra etre traite plus tard avec un decoupage de code supplementaire.
 
-## 9. Deploiement
+## 10. Deploiement
 
 - Le build Nitro cible Vercel, conformément à `vercel.json`.
 - Definir toutes les variables secretes dans la plateforme de deploiement, pas dans le depot.

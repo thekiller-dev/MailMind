@@ -46,6 +46,8 @@ export interface UserSettings {
   slackAlerts: boolean;
   quietStart: string;
   quietEnd: string;
+  telegramDigestTime: string;
+  timezone: string;
 }
 
 export const DEFAULT_SETTINGS: UserSettings = {
@@ -62,7 +64,15 @@ export const DEFAULT_SETTINGS: UserSettings = {
   slackAlerts: false,
   quietStart: "22:00",
   quietEnd: "07:30",
+  telegramDigestTime: "08:00",
+  timezone: "UTC",
 };
+
+const EMAIL_SELECT =
+  "id,sender,subject,body,snippet,category,intent,sentiment,risk_score,summary,entities,received_at,account_id,provider_message_id,analyzed_at,archived_at,reported_at,risk_reason";
+const EMAIL_CACHE_TTL = 30_000;
+const emailCache = new Map<string, { emails: DbEmail[]; cachedAt: number }>();
+const accountCache = new Map<string, { accounts: DbAccount[]; cachedAt: number }>();
 
 // Shared auth store: a single getUser() call and a single onAuthStateChange
 // listener are fanned out to every useUser() consumer, instead of each hook
@@ -120,31 +130,44 @@ export function useEmails() {
       return;
     }
     let cancelled = false;
+    const cached = emailCache.get(userId);
+    if (cached && Date.now() - cached.cachedAt < EMAIL_CACHE_TTL) {
+      setEmails(cached.emails);
+      setLoading(false);
+    }
+
     const load = () => {
       supabase
         .from("emails")
-        .select("*")
+        .select(EMAIL_SELECT)
         .is("archived_at", null)
         .order("received_at", { ascending: false })
-        .limit(500)
+        .limit(200)
         .then(({ data }) => {
           if (!cancelled) {
-            setEmails((data as DbEmail[]) ?? []);
+            const nextEmails = (data as DbEmail[]) ?? [];
+            emailCache.set(userId, { emails: nextEmails, cachedAt: Date.now() });
+            setEmails(nextEmails);
             setLoading(false);
           }
         });
     };
     load();
+    let refreshTimer: ReturnType<typeof setTimeout> | undefined;
     const channel = supabase
       .channel(`emails:${userId}:${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "emails", filter: `user_id=eq.${userId}` },
-        () => load(),
+        () => {
+          if (refreshTimer) clearTimeout(refreshTimer);
+          refreshTimer = setTimeout(load, 500);
+        },
       )
       .subscribe();
     return () => {
       cancelled = true;
+      if (refreshTimer) clearTimeout(refreshTimer);
       supabase.removeChannel(channel);
     };
   }, [userId]);
@@ -163,6 +186,11 @@ export function useAccounts() {
       return;
     }
     let cancelled = false;
+    const cached = accountCache.get(userId);
+    if (cached && Date.now() - cached.cachedAt < EMAIL_CACHE_TTL) {
+      setAccounts(cached.accounts);
+      setLoading(false);
+    }
     const load = () =>
       supabase
         .from("email_accounts")
@@ -170,7 +198,9 @@ export function useAccounts() {
         .order("created_at", { ascending: false })
         .then(({ data }) => {
           if (!cancelled) {
-            setAccounts((data as DbAccount[]) ?? []);
+            const nextAccounts = (data as DbAccount[]) ?? [];
+            accountCache.set(userId, { accounts: nextAccounts, cachedAt: Date.now() });
+            setAccounts(nextAccounts);
             setLoading(false);
           }
         });
@@ -205,7 +235,7 @@ export function useUserSettings() {
     let cancelled = false;
     supabase
       .from("user_settings")
-      .select("settings")
+      .select("settings,telegram_digest_time,timezone")
       .eq("user_id", user.id)
       .maybeSingle()
       .then(({ data }) => {
@@ -214,6 +244,9 @@ export function useUserSettings() {
         setSettings({
           ...DEFAULT_SETTINGS,
           ...(stored && typeof stored === "object" && !Array.isArray(stored) ? stored : {}),
+          telegramDigestTime:
+            data?.telegram_digest_time?.slice(0, 5) ?? DEFAULT_SETTINGS.telegramDigestTime,
+          timezone: data?.timezone ?? DEFAULT_SETTINGS.timezone,
         } as UserSettings);
         setLoading(false);
       });
@@ -229,6 +262,8 @@ export function useUserSettings() {
     const { error } = await supabase.from("user_settings").upsert({
       user_id: user.id,
       settings: next,
+      telegram_digest_time: next.telegramDigestTime,
+      timezone: next.timezone,
       updated_at: new Date().toISOString(),
     });
     if (error) throw error;

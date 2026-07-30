@@ -235,16 +235,22 @@ export type Database = {
       user_settings: {
         Row: {
           settings: Json;
+          telegram_digest_time: string;
+          timezone: string;
           updated_at: string;
           user_id: string;
         };
         Insert: {
           settings?: Json;
+          telegram_digest_time?: string;
+          timezone?: string;
           updated_at?: string;
           user_id: string;
         };
         Update: {
           settings?: Json;
+          telegram_digest_time?: string;
+          timezone?: string;
           updated_at?: string;
           user_id?: string;
         };

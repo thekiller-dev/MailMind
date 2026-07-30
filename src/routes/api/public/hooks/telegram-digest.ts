@@ -11,6 +11,38 @@ function escapeHtml(value: string): string {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+function getLocalDateTime(timeZone: string, date = new Date()) {
+  try {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).formatToParts(date);
+    const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+    return {
+      date: `${values.year}-${values.month}-${values.day}`,
+      minutes: Number(values.hour) * 60 + Number(values.minute),
+    };
+  } catch {
+    return getLocalDateTime("UTC", date);
+  }
+}
+
+function isDigestDue(configuredTime: string, timeZone: string, now = new Date()) {
+  const [hours, minutes] = configuredTime.split(":").map(Number);
+  if (!Number.isInteger(hours) || !Number.isInteger(minutes)) return null;
+  const local = getLocalDateTime(timeZone, now);
+  const target = hours * 60 + minutes;
+  const difference = Math.abs(local.minutes - target);
+  const circularDifference = Math.min(difference, 1_440 - difference);
+  if (circularDifference > 14) return null;
+  return local.date;
+}
+
 async function sendTelegram(chatId: number, text: string) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token) throw new Error("Missing TELEGRAM_BOT_TOKEN");
@@ -50,14 +82,39 @@ export const Route = createFileRoute("/api/public/hooks/telegram-digest")({
         if (connectionError)
           return Response.json({ ok: false, error: "connections_failed" }, { status: 500 });
 
+        const userIds = (connections ?? []).map((connection) => connection.user_id);
+        const { data: settingsRows, error: settingsError } = userIds.length
+          ? await supabaseAdmin
+              .from("user_settings")
+              .select("user_id,telegram_digest_time,timezone")
+              .in("user_id", userIds)
+          : { data: [], error: null };
+        if (settingsError)
+          return Response.json({ ok: false, error: "settings_failed" }, { status: 500 });
+
+        const settingsByUser = new Map(
+          (settingsRows ?? []).map((row) => [
+            row.user_id,
+            {
+              time: row.telegram_digest_time ?? "08:00",
+              timezone: row.timezone ?? "UTC",
+            },
+          ]),
+        );
         const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-        const digestId = `digest:${new Date().toISOString().slice(0, 10)}`;
         let sent = 0;
         for (const connection of connections ?? []) {
+          const settings = settingsByUser.get(connection.user_id) ?? {
+            time: "08:00",
+            timezone: "UTC",
+          };
+          const localDate = isDigestDue(settings.time, settings.timezone);
+          if (!localDate) continue;
+          const digestId = `digest:${localDate}:${connection.user_id}`;
           const { data: alreadySent } = await supabaseAdmin
             .from("telegram_delivery_events")
             .select("event_id")
-            .eq("event_id", `${digestId}:${connection.user_id}`)
+            .eq("event_id", digestId)
             .maybeSingle();
           if (alreadySent) continue;
 
@@ -80,7 +137,7 @@ export const Route = createFileRoute("/api/public/hooks/telegram-digest")({
             `<b>Digest MailMind</b>\n\n${lines.join("\n\n")}`,
           );
           await supabaseAdmin.from("telegram_delivery_events").insert({
-            event_id: `${digestId}:${connection.user_id}`,
+            event_id: digestId,
             chat_id: connection.chat_id,
             event_type: "digest",
           });

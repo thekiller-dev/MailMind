@@ -130,14 +130,13 @@ async function sendAlerts(
     .limit(50);
   if (error) throw error;
   const alerts = (emails ?? [])
-    .filter(
-      (email) =>
-        mode === "urgent"
-          ? email.category === "Urgent"
-          : Number(email.risk_score ?? 0) >= 0.6 ||
-            email.category === "Phishing" ||
-            email.category === "Sécurité" ||
-            email.category === "Urgent",
+    .filter((email) =>
+      mode === "urgent"
+        ? email.category === "Urgent"
+        : Number(email.risk_score ?? 0) >= 0.6 ||
+          email.category === "Phishing" ||
+          email.category === "Sécurité" ||
+          email.category === "Urgent",
     )
     .slice(0, 10);
   if (!alerts.length) return sendTelegramMessage(chatId, "Aucune alerte récente.");
@@ -176,7 +175,7 @@ Deno.serve(async (request) => {
     const { error: eventClaimError } = await supabase.from("telegram_delivery_events").insert({
       event_id: updateEventId,
       chat_id: chatId,
-      event_type: "received",
+      event_type: text.startsWith("/") ? "command" : "received",
     });
     if (eventClaimError?.code === "23505") return json({ ok: true, duplicate: true });
     if (eventClaimError) throw eventClaimError;

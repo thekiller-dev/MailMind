@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="fr">
+  <body
+    style="
+      margin: 0;
+      background: #f7fafc;
+      color: #172033;
+      font-family: Arial, Helvetica, sans-serif;
+    "
+  >
+    <div style="max-width: 600px; margin: 0 auto; padding: 32px 18px">
+      <div
+        style="
+          background: #ffffff;
+          border: 1px solid #dbe5f0;
+          border-radius: 24px;
+          overflow: hidden;
+        "
+      >
+        <div style="padding: 28px 32px; background: #122b52; color: #ffffff">
+          <div style="font-size: 20px; font-weight: 700; letter-spacing: 1px">MAILMIND</div>
+        </div>
+        <div style="padding: 32px">
+          <p style="margin: 0; color: #52627a; font-size: 13px">Mise à jour du compte</p>
+          <h1 style="margin: 10px 0 16px; font-size: 28px; line-height: 1.2; color: #122b52">
+            Confirmez votre nouvelle adresse
+          </h1>
+          <p style="margin: 0; color: #52627a; font-size: 15px; line-height: 1.7">
+            Confirmez {{ .NewEmail }} pour terminer la modification de votre compte MailMind.
+          </p>
+          <p style="margin: 28px 0">
+            <a
+              href="{{ .ConfirmationURL }}"
+              style="
+                display: inline-block;
+                background: #2563eb;
+                color: #ffffff;
+                border-radius: 10px;
+                padding: 14px 22px;
+                text-decoration: none;
+                font-weight: 700;
+                font-size: 14px;
+              "
+            >
+              Confirmer la nouvelle adresse
+            </a>
+          </p>
+          <p style="margin: 0; color: #7b8798; font-size: 12px; line-height: 1.6">
+            Si vous n’êtes pas à l’origine de cette demande, ignorez ce message et sécurisez votre
+            compte.
+          </p>
+        </div>
+      </div>
+      <p style="margin: 18px 0 0; text-align: center; color: #8491a3; font-size: 11px">
+        © MailMind
+      </p>
+    </div>
+  </body>
+</html>
