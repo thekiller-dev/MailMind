@@ -160,12 +160,12 @@ Le lien est à usage unique et expire après 15 minutes.
 Commandes disponibles après liaison :
 `/help`, `/status`, `/digest`, `/alerts` et `/unlink`.
 
-Les alertes urgentes et phishing sont envoyées après analyse. Le digest Telegram
-est exécuté toutes les 15 minutes par Vercel Cron via
-`/api/public/hooks/telegram-digest`, puis envoyé selon l'heure et le fuseau
-configurés par chaque utilisateur. Cette route exige `CRON_SECRET`.
-Une fréquence de cron inférieure à la fréquence quotidienne peut nécessiter un
-plan Vercel compatible avec les cron jobs fréquents.
+Les alertes urgentes et phishing sont envoyées après analyse. Pour rester
+compatible avec Vercel Hobby, le digest Telegram est déclenché une fois par
+jour à 08:00 UTC via `/api/public/hooks/telegram-digest`. Cette précision
+réduite peut ne pas correspondre exactement à l'heure locale choisie par tous
+les utilisateurs ; le planning local précis nécessite un plan Vercel
+compatible avec les cron jobs fréquents. Cette route exige `CRON_SECRET`.
 
 ## 7. Synchronisation Gmail historique (optionnelle)
 

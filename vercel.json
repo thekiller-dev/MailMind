@@ -10,7 +10,7 @@
     },
     {
       "path": "/api/public/hooks/telegram-digest",
-      "schedule": "*/15 * * * *"
+      "schedule": "0 8 * * *"
     }
   ]
 }
