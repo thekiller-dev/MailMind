@@ -52,6 +52,10 @@ function SettingsPage() {
   const search = useSearch({ from: "/settings" });
 
   useEffect(() => {
+    if (search.gmail === "connected") {
+      toast.success("Compte Gmail ajouté. Vous pouvez synchroniser ce compte depuis Paramètres.");
+      return;
+    }
     if (search.gmail?.startsWith("error:")) {
       const code = search.gmail.slice(6);
       const message =
@@ -236,13 +240,15 @@ function AccountsTab() {
                     onClick={() => handleSync(a.id)}
                     disabled={pending === a.id}
                     title="Synchroniser"
-                    className="grid size-9 place-items-center rounded-md glass-subtle text-muted-foreground hover:text-foreground disabled:opacity-40"
+                    aria-label={`Synchroniser ${a.email}`}
+                    className="flex h-9 items-center justify-center gap-2 rounded-md glass-subtle px-2 text-xs text-muted-foreground hover:text-foreground disabled:opacity-40"
                   >
                     {pending === a.id ? (
                       <Loader2 className="size-4 animate-spin" />
                     ) : (
                       <RefreshCw className="size-4" />
                     )}
+                    <span className="hidden sm:inline">Synchroniser</span>
                   </button>
                 )}
                 <button

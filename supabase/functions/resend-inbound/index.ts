@@ -62,19 +62,25 @@ function htmlToText(html: string): string {
     .trim();
 }
 
-function gmailConfirmation(body: string, sender: string, subject: string) {
+function gmailConfirmation(text: string, html: string, sender: string, subject: string) {
   const isConfirmation =
     sender.toLowerCase().includes("forwarding-noreply@google.com") ||
-    /gmail forwarding confirmation|confirmation du transfert gmail/i.test(subject);
+    /gmail.*(forwarding|transfert).*confirmation|confirmation.*(forwarding|transfert).*gmail|confirmation du transfert|confirmation de transfert/i.test(
+      subject,
+    );
   if (!isConfirmation) return null;
 
+  const body = [text, htmlToText(html)].filter(Boolean).join("\n");
   const code =
     body.match(/(?:confirmation code|code de confirmation)\D{0,30}(\d{6,14})/i)?.[1] ??
     body.match(/\b(\d{9})\b/)?.[1] ??
     null;
   const url =
-    body
-      .match(/https:\/\/(?:mail-settings\.google\.com|accounts\.google\.com)\/[^\s<>"']+/i)?.[0]
+    [text, html]
+      .join("\n")
+      .match(
+        /https:\/\/(?:mail-settings\.google\.com|accounts\.google\.com|mail\.google\.com)\/[^\s<>"']+/i,
+      )?.[0]
       ?.replace(/&amp;/g, "&") ?? null;
   return { code, url };
 }
@@ -184,7 +190,12 @@ Deno.serve(async (request) => {
     if (accountError || !account) return json({ ok: true, ignored: "inactive recipient" });
 
     const body = (email.text?.trim() || htmlToText(email.html ?? "")).slice(0, 8000);
-    const confirmation = gmailConfirmation(body, email.from, email.subject);
+    const confirmation = gmailConfirmation(
+      email.text?.slice(0, 8000) ?? "",
+      email.html?.slice(0, 16000) ?? "",
+      email.from,
+      email.subject,
+    );
     if (confirmation) {
       const { error } = await supabase
         .from("email_accounts")

@@ -98,7 +98,7 @@ export const Route = createFileRoute("/api/gmail/callback")({
 
           return new Response(null, {
             status: 302,
-            headers: { Location: `${origin}/dashboard?connected=gmail` },
+            headers: { Location: `${origin}/settings?gmail=connected` },
           });
         } catch (e) {
           console.error("oauth callback error", e);
