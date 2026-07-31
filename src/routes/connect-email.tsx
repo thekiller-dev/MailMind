@@ -32,8 +32,8 @@ function ConnectEmailPage() {
             Connectez vos e-mails en toute clarté.
           </h1>
           <p className="mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-            MailMind peut analyser plusieurs comptes. Choisissez la méthode qui correspond à votre
-            besoin : connexion Google directe ou transfert contrôlé vers une adresse privée.
+            MailMind se connecte en priorité via l’API Gmail (OAuth). Un transfert vers une adresse
+            privée reste disponible en alternative.
           </p>
         </div>
 
@@ -42,22 +42,22 @@ function ConnectEmailPage() {
             icon={Globe2}
             eyebrow="Méthode recommandée"
             title="Connexion Gmail avec Google"
-            description="Une connexion OAuth sécurisée pour synchroniser un compte Gmail et ses nouveaux messages."
+            description="OAuth sécurisé pour synchroniser, analyser et agir sur vos messages (archive, spam, réponses)."
             steps={[
               "Cliquez sur « Ajouter un compte Gmail » dans les Paramètres.",
               "Choisissez le compte Google à connecter.",
-              "Vérifiez les autorisations affichées par Google.",
+              "Acceptez les autorisations Gmail affichées par Google.",
               "Revenez sur MailMind : le premier scan démarre automatiquement.",
             ]}
           />
           <GuideCard
             icon={Forward}
-            eyebrow="Alternative sans accès Gmail"
+            eyebrow="Alternative"
             title="Transfert Gmail vers MailMind"
-            description="Une adresse privée reçoit les messages transférés, sans donner à MailMind l’accès à votre compte Google."
+            description="Sans accès OAuth : les messages sont transférés vers une adresse privée MailMind."
             steps={[
-              "Créez une adresse de transfert depuis les Paramètres.",
-              "Ajoutez cette adresse dans Gmail → Paramètres → Transfert et POP/IMAP.",
+              "Ouvrez « Méthode alternative : transfert » dans les Paramètres.",
+              "Ajoutez l’adresse MailMind dans Gmail → Transfert et POP/IMAP.",
               "Validez l’e-mail de confirmation envoyé par Google.",
               "Activez le transfert et vérifiez le statut « Transfert actif ».",
             ]}

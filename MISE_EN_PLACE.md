@@ -61,6 +61,35 @@ http://localhost:5000/api/gmail/callback
 
 `APP_ORIGIN` doit rester égal à `https://www.mailmind.me` en production.
 
+### Gmail API (chemin principal)
+
+MailMind utilise d’abord l’API Gmail OAuth (`gmail.modify` + `gmail.send`) :
+
+1. Paramètres → **Ajouter un compte Gmail**.
+2. Autoriser MailMind dans Google.
+3. Sync initiale au callback, puis sync manuelle ou cron quotidien (`0 3 * * *` sur Hobby).
+4. Les alertes Telegram urgentes/phishing sont envoyées après l’analyse OAuth (variable `TELEGRAM_BOT_TOKEN` obligatoire aussi côté **Vercel**, pas seulement Supabase).
+
+Scopes OAuth mail (client Google Cloud dédié aux boîtes) :
+
+```text
+openid email profile
+https://www.googleapis.com/auth/gmail.modify
+https://www.googleapis.com/auth/gmail.send
+```
+
+Le transfert Resend reste une **méthode alternative** dans Paramètres (section repliée).
+
+Checklist Vercel production :
+
+- `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET`
+- `TOKEN_ENCRYPTION_KEY`
+- `APP_ORIGIN=https://www.mailmind.me`
+- `APP_ORIGINS` incluant localhost + mailmind.me + www
+- `CRON_SECRET`
+- `TELEGRAM_BOT_TOKEN` (pour alertes post-sync OAuth)
+- `AI_*` pour l’analyse
+
 ## 2. Harmoniser Supabase
 
 Les valeurs suivantes doivent appartenir au meme projet Supabase :

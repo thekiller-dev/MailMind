@@ -276,6 +276,11 @@ function Dashboard() {
                     <p className="truncate text-sm font-semibold">{a.display_name ?? a.email}</p>
                     <p className="truncate font-mono text-[10px] text-muted-foreground">
                       {a.email}
+                      {a.provider === "google"
+                        ? " · Gmail API"
+                        : a.provider === "forwarding"
+                          ? " · Transfert"
+                          : ""}
                     </p>
                   </div>
                   <span className="hidden font-mono text-[10px] text-muted-foreground sm:inline">
@@ -292,7 +297,7 @@ function Dashboard() {
                 to="/settings"
                 className="block w-full rounded-2xl border border-dashed border-border py-3 text-center text-xs font-semibold text-muted-foreground hover:bg-surface-muted"
               >
-                + Ajouter un compte
+                + Ajouter un compte Gmail
               </Link>
             </div>
           </div>

@@ -4,6 +4,7 @@ import { fetchMessage, listMessageIds, refreshAccessToken } from "./gmail.server
 import { analyzeEmailContent } from "./email-analysis.server";
 import { decryptSecret, encryptSecret, isEncryptedSecret } from "./secret-crypto.server";
 import { buildPreferenceAnalysis, getPreferenceList, matchesSenderList } from "./business-rules";
+import { notifyEmailAnalysis } from "./telegram-notify.server";
 
 interface AccountRow {
   id: string;
@@ -163,6 +164,19 @@ export async function syncGmailAccount(
           .update({ ...preferenceAnalysis, analyzed_at: new Date().toISOString() })
           .eq("id", emailRowId);
         analyzed++;
+        try {
+          await notifyEmailAnalysis(supabase, account.user_id, {
+            id: emailRowId,
+            sender: msgSender,
+            subject: msgSubject,
+            summary: preferenceAnalysis.summary,
+            category: preferenceAnalysis.category,
+            risk_score: preferenceAnalysis.risk_score,
+            risk_reason: preferenceAnalysis.risk_reason,
+          });
+        } catch (e) {
+          errors.push(e instanceof Error ? e.message : String(e));
+        }
         continue;
       }
 
@@ -187,6 +201,19 @@ export async function syncGmailAccount(
             })
             .eq("id", emailRowId);
           analyzed++;
+          try {
+            await notifyEmailAnalysis(supabase, account.user_id, {
+              id: emailRowId,
+              sender: msgSender,
+              subject: msgSubject,
+              summary: a.summary,
+              category: a.category,
+              risk_score: a.risk_score,
+              risk_reason: a.risk_reason,
+            });
+          } catch (notifyError) {
+            errors.push(notifyError instanceof Error ? notifyError.message : String(notifyError));
+          }
         } catch (e) {
           errors.push(e instanceof Error ? e.message : String(e));
         }

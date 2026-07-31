@@ -4,26 +4,26 @@ import { useState } from "react";
 const steps = [
   {
     title: "Ouvrez les Paramètres",
-    description: "Commencez par la section Comptes pour ajouter votre première boîte mail.",
+    description: "Allez dans l’onglet Comptes pour ajouter votre première boîte Gmail.",
   },
   {
-    title: "Choisissez votre méthode",
+    title: "Ajoutez un compte Gmail",
     description:
-      "Gmail OAuth connecte directement votre compte. Le transfert Gmail ne partage aucun accès.",
+      "Cliquez sur « Ajouter un compte Gmail ». C’est la méthode recommandée via l’API Google.",
   },
   {
-    title: "Autorisez ou ajoutez votre adresse",
+    title: "Autorisez MailMind",
     description:
-      "Avec Gmail, choisissez le compte Google. Avec le transfert, copiez l’adresse MailMind.",
+      "Choisissez le compte Google et acceptez les permissions de lecture, classification et réponses.",
   },
   {
-    title: "Confirmez dans Gmail",
+    title: "Attendez le premier scan",
+    description: "MailMind synchronise automatiquement vos messages récents et lance l’analyse IA.",
+  },
+  {
+    title: "Activez Telegram (optionnel)",
     description:
-      "Si Gmail vous envoie un e-mail de confirmation, ouvrez-le puis validez le transfert.",
-  },
-  {
-    title: "Revenez vérifier le scan",
-    description: "MailMind lance l’analyse initiale et affiche vos messages dans le dashboard.",
+      "Dans Notifications, liez Telegram pour recevoir les alertes urgentes et de sécurité.",
   },
 ] as const;
 
