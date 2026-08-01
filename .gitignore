@@ -38,3 +38,8 @@ supabase/.temp/
 
 .vercel
 .env*
+
+# Google Cloud service account keys (RISC / local only — never commit)
+mailmind-*-*.json
+*-firebase-adminsdk-*.json
+*service-account*.json
