@@ -18,6 +18,7 @@ VITE_SUPABASE_PUBLISHABLE_KEY=
 VITE_SUPABASE_PROJECT_ID=
 GOOGLE_OAUTH_CLIENT_ID=
 GOOGLE_OAUTH_CLIENT_SECRET=
+GOOGLE_RISC_AUDIENCES=
 AI_API_KEY=
 AI_BASE_URL=https://api.imole.app/v1
 AI_AUTH_HEADER=Authorization
@@ -83,12 +84,44 @@ Le transfert Resend reste une **méthode alternative** dans Paramètres (section
 Checklist Vercel production :
 
 - `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET`
+- `GOOGLE_RISC_AUDIENCES` (client IDs Sign-In Google / Supabase, en plus du client Gmail)
 - `TOKEN_ENCRYPTION_KEY`
 - `APP_ORIGIN=https://www.mailmind.me`
 - `APP_ORIGINS` incluant localhost + mailmind.me + www
 - `CRON_SECRET`
 - `TELEGRAM_BOT_TOKEN` (pour alertes post-sync OAuth)
 - `AI_*` pour l’analyse
+
+### Cross-Account Protection (RISC)
+
+MailMind expose un receiver HTTPS :
+
+```text
+https://www.mailmind.me/api/public/hooks/risc
+```
+
+Sur un événement Google (compte compromis, tokens révoqués, sessions révoquées), MailMind :
+
+- déconnecte les comptes Gmail matchés (`provider_account_id` = Google `sub`)
+- efface les tokens OAuth stockés
+- invalide les sessions Supabase des utilisateurs concernés
+
+Checklist Google Cloud (même projet que les clients OAuth) :
+
+1. Activer l’API **RISC** et accepter les [RISC Terms](https://console.cloud.google.com/tos?id=risc).
+2. Créer un service account avec le rôle **RISC Configuration Admin** (`roles/riscconfigs.admin`) et une clé JSON **locale uniquement**.
+3. S’assurer que `mailmind.me` est un domaine autorisé de l’écran de consentement OAuth.
+4. Déployer l’app, appliquer la migration `risc_security_events`, puis enregistrer le stream :
+
+```bash
+set GOOGLE_RISC_SERVICE_ACCOUNT_JSON=C:\path\to\risc-sa.json
+node scripts/register-risc-stream.mjs
+node scripts/register-risc-stream.mjs --verify
+```
+
+5. Dans le dossier de vérification Google, indiquer que Cross-Account Protection est implémenté sur l’URL ci-dessus.
+
+Ne jamais uploader la clé du service account RISC sur Vercel : elle sert uniquement à l’enregistrement du stream.
 
 ## 2. Harmoniser Supabase
 

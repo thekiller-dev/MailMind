@@ -24,6 +24,7 @@ import { Route as SecurityRouteImport } from './routes/security'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as ApiGmailCallbackRouteImport } from './routes/api/gmail/callback'
+import { Route as ApiPublicHooksRiscRouteImport } from './routes/api/public/hooks/risc'
 import { Route as ApiPublicHooksSyncEmailsRouteImport } from './routes/api/public/hooks/sync-emails'
 import { Route as ApiPublicHooksTelegramDigestRouteImport } from './routes/api/public/hooks/telegram-digest'
 
@@ -102,6 +103,11 @@ const ApiGmailCallbackRoute = ApiGmailCallbackRouteImport.update({
   path: '/api/gmail/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksRiscRoute = ApiPublicHooksRiscRouteImport.update({
+  id: '/api/public/hooks/risc',
+  path: '/api/public/hooks/risc',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHooksSyncEmailsRoute =
   ApiPublicHooksSyncEmailsRouteImport.update({
     id: '/api/public/hooks/sync-emails',
@@ -131,6 +137,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/terms': typeof TermsRoute
   '/api/gmail/callback': typeof ApiGmailCallbackRoute
+  '/api/public/hooks/risc': typeof ApiPublicHooksRiscRoute
   '/api/public/hooks/sync-emails': typeof ApiPublicHooksSyncEmailsRoute
   '/api/public/hooks/telegram-digest': typeof ApiPublicHooksTelegramDigestRoute
 }
@@ -150,6 +157,7 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/terms': typeof TermsRoute
   '/api/gmail/callback': typeof ApiGmailCallbackRoute
+  '/api/public/hooks/risc': typeof ApiPublicHooksRiscRoute
   '/api/public/hooks/sync-emails': typeof ApiPublicHooksSyncEmailsRoute
   '/api/public/hooks/telegram-digest': typeof ApiPublicHooksTelegramDigestRoute
 }
@@ -170,6 +178,7 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/terms': typeof TermsRoute
   '/api/gmail/callback': typeof ApiGmailCallbackRoute
+  '/api/public/hooks/risc': typeof ApiPublicHooksRiscRoute
   '/api/public/hooks/sync-emails': typeof ApiPublicHooksSyncEmailsRoute
   '/api/public/hooks/telegram-digest': typeof ApiPublicHooksTelegramDigestRoute
 }
@@ -191,6 +200,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/terms'
     | '/api/gmail/callback'
+    | '/api/public/hooks/risc'
     | '/api/public/hooks/sync-emails'
     | '/api/public/hooks/telegram-digest'
   fileRoutesByTo: FileRoutesByTo
@@ -210,6 +220,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/terms'
     | '/api/gmail/callback'
+    | '/api/public/hooks/risc'
     | '/api/public/hooks/sync-emails'
     | '/api/public/hooks/telegram-digest'
   id:
@@ -229,6 +240,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/terms'
     | '/api/gmail/callback'
+    | '/api/public/hooks/risc'
     | '/api/public/hooks/sync-emails'
     | '/api/public/hooks/telegram-digest'
   fileRoutesById: FileRoutesById
@@ -249,6 +261,7 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   TermsRoute: typeof TermsRoute
   ApiGmailCallbackRoute: typeof ApiGmailCallbackRoute
+  ApiPublicHooksRiscRoute: typeof ApiPublicHooksRiscRoute
   ApiPublicHooksSyncEmailsRoute: typeof ApiPublicHooksSyncEmailsRoute
   ApiPublicHooksTelegramDigestRoute: typeof ApiPublicHooksTelegramDigestRoute
 }
@@ -360,6 +373,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiGmailCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/risc': {
+      id: '/api/public/hooks/risc'
+      path: '/api/public/hooks/risc'
+      fullPath: '/api/public/hooks/risc'
+      preLoaderRoute: typeof ApiPublicHooksRiscRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/sync-emails': {
       id: '/api/public/hooks/sync-emails'
       path: '/api/public/hooks/sync-emails'
@@ -393,6 +413,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   TermsRoute: TermsRoute,
   ApiGmailCallbackRoute: ApiGmailCallbackRoute,
+  ApiPublicHooksRiscRoute: ApiPublicHooksRiscRoute,
   ApiPublicHooksSyncEmailsRoute: ApiPublicHooksSyncEmailsRoute,
   ApiPublicHooksTelegramDigestRoute: ApiPublicHooksTelegramDigestRoute,
 }

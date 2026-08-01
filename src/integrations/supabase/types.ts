@@ -86,6 +86,30 @@ export type Database = {
         };
         Relationships: [];
       };
+      risc_security_events: {
+        Row: {
+          event_types: string[];
+          handled_at: string | null;
+          jti: string;
+          received_at: string;
+          subject_sub: string | null;
+        };
+        Insert: {
+          event_types?: string[];
+          handled_at?: string | null;
+          jti: string;
+          received_at?: string;
+          subject_sub?: string | null;
+        };
+        Update: {
+          event_types?: string[];
+          handled_at?: string | null;
+          jti?: string;
+          received_at?: string;
+          subject_sub?: string | null;
+        };
+        Relationships: [];
+      };
       email_accounts: {
         Row: {
           access_token: string | null;
