@@ -2,8 +2,17 @@
  * Helpers purs pour le webhook WhatsApp / OpenWA (testables sans env).
  */
 
+/** WhatsApp / clients mobiles injectent parfois des ZWSP / BOM autour du texte collé. */
+export function sanitizeWhatsAppText(text: string): string {
+  return text
+    .replace(/[\u200B-\u200D\uFEFF\u2060]/g, "")
+    .replace(/\r\n/g, "\n")
+    .trim();
+}
+
 export function resolveWhatsAppCommand(text: string): string {
-  const firstWord = text.split(/\s+/, 1)[0]?.toLowerCase().split("@", 1)[0] ?? "";
+  const cleaned = sanitizeWhatsAppText(text);
+  const firstWord = cleaned.split(/\s+/, 1)[0]?.toLowerCase().split("@", 1)[0] ?? "";
   if (firstWord.startsWith("/")) {
     const aliases: Record<string, string> = {
       "/aide": "/help",
@@ -20,13 +29,13 @@ export function resolveWhatsAppCommand(text: string): string {
     return aliases[firstWord] ?? firstWord;
   }
 
-  const normalized = text
+  const normalized = cleaned
     .toLocaleLowerCase("fr-FR")
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "");
 
   // Liaison : "LIEN <token>" ou "START <token>"
-  if (/^(lien|start)\s+\S+/i.test(text.trim())) return "/start";
+  if (/^(lien|start)\s+\S+/i.test(cleaned)) return "/start";
 
   if (/\b(dernier|recents?|resume|mails?|messages?)\b/.test(normalized)) return "/recents";
   if (/\b(urgence|urgent|immediat)\b/.test(normalized)) return "/urgent";
@@ -38,7 +47,7 @@ export function resolveWhatsAppCommand(text: string): string {
 }
 
 export function extractLinkToken(text: string): string | null {
-  const trimmed = text.trim();
+  const trimmed = sanitizeWhatsAppText(text);
   const match =
     /^(?:\/(?:start|lien)|lien|start)\s+(\S+)/i.exec(trimmed) ??
     null;

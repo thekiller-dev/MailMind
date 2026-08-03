@@ -4,18 +4,23 @@ import {
   extractLinkToken,
   hashLinkToken,
   resolveWhatsAppCommand,
+  sanitizeWhatsAppText,
 } from "./whatsapp-commands";
 
 type OpenWaMessageData = {
   id?: string;
   from?: string;
   to?: string;
+  chatId?: string;
   body?: string | null;
+  text?: string | null;
+  caption?: string | null;
   type?: string;
   isGroup?: boolean;
   kind?: string;
   contact?: { name?: string; pushName?: string } | null;
   fromMe?: boolean;
+  senderPhone?: string | null;
 };
 
 export type OpenWaWebhookBody = {
@@ -24,8 +29,44 @@ export type OpenWaWebhookBody = {
   sessionId?: string;
   idempotencyKey?: string;
   deliveryId?: string;
-  data?: OpenWaMessageData;
+  data?: OpenWaMessageData | null;
+  // Variantes rares / anciennes : message à la racine
+  message?: OpenWaMessageData | null;
 };
+
+/**
+ * Normalise l’enveloppe OpenWA (`data` documenté) et les variantes réalistes
+ * (`message`, `chatId` sans `from`, `text`/`caption` sans `body`).
+ */
+export function normalizeOpenWaIncomingMessage(payload: OpenWaWebhookBody): {
+  body: string;
+  chatId: string;
+  fromMe: boolean;
+  isGroup: boolean;
+  displayName: string | null;
+  messageId: string | null;
+} {
+  const data = payload.data ?? payload.message ?? null;
+  const rawBody =
+    (typeof data?.body === "string" && data.body) ||
+    (typeof data?.text === "string" && data.text) ||
+    (typeof data?.caption === "string" && data.caption) ||
+    "";
+  const chatId =
+    (typeof data?.from === "string" && data.from.trim()) ||
+    (typeof data?.chatId === "string" && data.chatId.trim()) ||
+    "";
+  const isGroup =
+    Boolean(data?.isGroup) || data?.kind === "group" || chatId.endsWith("@g.us");
+  return {
+    body: sanitizeWhatsAppText(rawBody),
+    chatId,
+    fromMe: Boolean(data?.fromMe),
+    isGroup,
+    displayName: data?.contact?.pushName || data?.contact?.name || null,
+    messageId: typeof data?.id === "string" ? data.id : null,
+  };
+}
 
 async function sendHelp(chatId: string) {
   await sendOpenWaText(
@@ -110,12 +151,27 @@ export async function handleOpenWaMessageReceived(
   payload: OpenWaWebhookBody,
   idempotencyKey: string,
 ): Promise<{ ok: true; duplicate?: boolean; ignored?: boolean; rateLimited?: boolean }> {
-  const data = payload.data;
-  const body = data?.body?.trim() ?? "";
-  const chatId = data?.from?.trim() ?? "";
-  if (!body || !chatId) return { ok: true, ignored: true };
-  if (data?.fromMe) return { ok: true, ignored: true };
-  if (data?.isGroup || data?.kind === "group") return { ok: true, ignored: true };
+  const expectedSession = process.env.OPENWA_SESSION_ID?.trim();
+  if (expectedSession && payload.sessionId && payload.sessionId !== expectedSession) {
+    // OpenWA scope déjà les webhooks par session ; on journalise sans bloquer
+    // pour éviter un faux négatif si OPENWA_SESSION_ID côté Vercel est décalé.
+    console.warn("whatsapp webhook session mismatch", {
+      expected: expectedSession,
+      received: payload.sessionId,
+    });
+  }
+
+  const normalized = normalizeOpenWaIncomingMessage(payload);
+  const { body, chatId, fromMe, isGroup, displayName } = normalized;
+  if (!body || !chatId) {
+    console.warn("whatsapp webhook ignored: missing body/from", {
+      hasData: Boolean(payload.data ?? payload.message),
+      keys: Object.keys((payload.data ?? payload.message ?? {}) as object),
+    });
+    return { ok: true, ignored: true };
+  }
+  if (fromMe) return { ok: true, ignored: true };
+  if (isGroup) return { ok: true, ignored: true };
 
   const { error: eventClaimError } = await supabase.from("whatsapp_delivery_events").insert({
     event_id: idempotencyKey,
@@ -157,12 +213,16 @@ export async function handleOpenWaMessageReceived(
       return { ok: true };
     }
 
-    const displayName = data?.contact?.pushName || data?.contact?.name || null;
+    const phone =
+      phoneFromChatId(chatId) ??
+      (typeof payload.data?.senderPhone === "string"
+        ? payload.data.senderPhone.replace(/\D/g, "") || null
+        : null);
     const { error: linkError } = await supabase
       .from("whatsapp_connections")
       .update({
         chat_id: chatId,
-        phone: phoneFromChatId(chatId),
+        phone,
         display_name: displayName,
         status: "linked",
         link_token_hash: null,

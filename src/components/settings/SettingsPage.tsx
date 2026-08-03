@@ -755,14 +755,56 @@ function WhatsAppCard({
     deepLink: string | null;
     prefill: string;
     waNumber: string | null;
+    expiresAt: string;
   } | null>(null);
   const [pending, setPending] = useState(false);
+  const [awaitingLink, setAwaitingLink] = useState(false);
 
   useEffect(() => {
     void getConnection()
       .then(setConnection)
       .catch(() => setConnection(null));
   }, [getConnection]);
+
+  // Après ouverture du deep link wa.me, interroger le statut jusqu’à liaison ou expiration.
+  useEffect(() => {
+    if (!awaitingLink || connection?.status === "linked") return;
+    let cancelled = false;
+    let attempts = 0;
+    const maxAttempts = 40; // ~2 minutes à 3 s
+    const tick = async () => {
+      attempts += 1;
+      try {
+        const next = await getConnection();
+        if (cancelled) return;
+        setConnection(next);
+        if (next?.status === "linked") {
+          setAwaitingLink(false);
+          setLinkInfo(null);
+          toast.success("WhatsApp est maintenant lié.");
+          return;
+        }
+      } catch {
+        /* ignore transient errors while polling */
+      }
+      if (attempts >= maxAttempts) {
+        if (!cancelled) {
+          setAwaitingLink(false);
+          toast.message("Toujours en attente", {
+            description:
+              "Renvoie le message « LIEN … » puis actualise Paramètres, ou vérifie le webhook OpenWA.",
+          });
+        }
+        return;
+      }
+      timer = window.setTimeout(() => void tick(), 3000);
+    };
+    let timer = window.setTimeout(() => void tick(), 3000);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [awaitingLink, connection?.status, getConnection]);
 
   async function generateLink() {
     setPending(true);
@@ -772,7 +814,11 @@ function WhatsAppCard({
         deepLink: result.deepLink,
         prefill: result.prefill,
         waNumber: result.waNumber,
+        expiresAt: result.expiresAt,
       });
+      const refreshed = await getConnection().catch(() => null);
+      if (refreshed) setConnection(refreshed);
+      setAwaitingLink(true);
       toast.success("Code WhatsApp généré pour 15 minutes.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "WhatsApp n'est pas disponible");
@@ -809,6 +855,7 @@ function WhatsAppCard({
   }
 
   const isLinked = connection?.status === "linked";
+  const isPendingLink = !isLinked && (awaitingLink || connection?.status === "pending" || Boolean(linkInfo));
   return (
     <Card
       title="WhatsApp"
@@ -820,6 +867,12 @@ function WhatsAppCard({
             Générez un code, ouvrez WhatsApp et envoyez le message prérempli au numéro MailMind. Le
             code expire après 15 minutes.
           </p>
+          {isPendingLink && (
+            <p className="mt-3 flex items-center gap-2 text-sm font-medium text-foreground">
+              <Loader2 className="size-4 animate-spin" aria-hidden />
+              En attente du message « LIEN … » sur WhatsApp…
+            </p>
+          )}
           <button
             type="button"
             onClick={() => void generateLink()}
@@ -828,7 +881,7 @@ function WhatsAppCard({
             className="mt-4 inline-flex items-center gap-2 rounded-md bg-foreground px-4 py-2 text-sm font-semibold text-background disabled:opacity-50"
           >
             <MessageCircle className="size-4" />
-            {pending ? "Génération…" : "Lier WhatsApp"}
+            {pending ? "Génération…" : linkInfo ? "Régénérer le code" : "Lier WhatsApp"}
           </button>
           {linkInfo && (
             <div className="mt-4 rounded-lg border border-border bg-background p-3">
@@ -837,6 +890,7 @@ function WhatsAppCard({
                   href={linkInfo.deepLink}
                   target="_blank"
                   rel="noreferrer"
+                  onClick={() => setAwaitingLink(true)}
                   className="break-all text-xs font-semibold text-primary hover:underline"
                 >
                   Ouvrir WhatsApp avec le message de liaison
@@ -857,6 +911,10 @@ function WhatsAppCard({
               {linkInfo.waNumber && (
                 <p className="mt-2 text-xs text-muted-foreground">Numéro : +{linkInfo.waNumber}</p>
               )}
+              <p className="mt-2 text-xs text-muted-foreground">
+                Expire à {new Date(linkInfo.expiresAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}.
+                Après envoi, MailMind répond sur WhatsApp et cette carte passe à « Connecté ».
+              </p>
             </div>
           )}
         </>

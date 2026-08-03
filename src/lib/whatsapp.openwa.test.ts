@@ -6,8 +6,13 @@ import {
   toOpenWaChatId,
   verifyOpenWaSignature,
 } from "./openwa.server";
-import { extractLinkToken, resolveWhatsAppCommand } from "./whatsapp-commands";
+import {
+  extractLinkToken,
+  resolveWhatsAppCommand,
+  sanitizeWhatsAppText,
+} from "./whatsapp-commands";
 import { isDigestDue } from "./whatsapp-digest.server";
+import { normalizeOpenWaIncomingMessage } from "./whatsapp-webhook.server";
 
 describe("openwa.server helpers", () => {
   it("normalise les chatId OpenWA", () => {
@@ -24,6 +29,7 @@ describe("openwa.server helpers", () => {
     const signature =
       "sha256=" + createHmac("sha256", secret).update(body).digest("hex");
     expect(verifyOpenWaSignature(body, signature, secret)).toBe(true);
+    expect(verifyOpenWaSignature(body, ` ${signature} `, ` ${secret} `)).toBe(true);
     expect(verifyOpenWaSignature(body, "sha256=deadbeef", secret)).toBe(false);
     expect(verifyOpenWaSignature(body, null, secret)).toBe(false);
   });
@@ -34,6 +40,7 @@ describe("whatsapp-commands", () => {
     expect(extractLinkToken("LIEN abc.def")).toBe("abc.def");
     expect(extractLinkToken("/start abc.def")).toBe("abc.def");
     expect(extractLinkToken("/lien abc.def")).toBe("abc.def");
+    expect(extractLinkToken("\u200BLIEN\u200B tok-en_1")).toBe("tok-en_1");
     expect(extractLinkToken("bonjour")).toBeNull();
   });
 
@@ -42,6 +49,69 @@ describe("whatsapp-commands", () => {
     expect(resolveWhatsAppCommand("/aide")).toBe("/help");
     expect(resolveWhatsAppCommand("montre mes derniers mails")).toBe("/recents");
     expect(resolveWhatsAppCommand("y a-t-il une urgence ?")).toBe("/urgent");
+  });
+
+  it("nettoie les caractères invisibles WhatsApp", () => {
+    expect(sanitizeWhatsAppText("\uFEFF LIEN abc \u200B")).toBe("LIEN abc");
+  });
+});
+
+describe("normalizeOpenWaIncomingMessage", () => {
+  it("lit le payload documenté OpenWA (data.from + data.body)", () => {
+    expect(
+      normalizeOpenWaIncomingMessage({
+        event: "message.received",
+        sessionId: "main",
+        data: {
+          id: "3EB0",
+          from: "33612345678@c.us",
+          body: "LIEN abc",
+          isGroup: false,
+        },
+      }),
+    ).toMatchObject({
+      body: "LIEN abc",
+      chatId: "33612345678@c.us",
+      fromMe: false,
+      isGroup: false,
+    });
+  });
+
+  it("accepte chatId / text et l’enveloppe message", () => {
+    expect(
+      normalizeOpenWaIncomingMessage({
+        event: "message.received",
+        data: {
+          chatId: "33699999999@s.whatsapp.net",
+          text: "  LIEN tok  ",
+        },
+      }),
+    ).toMatchObject({
+      body: "LIEN tok",
+      chatId: "33699999999@s.whatsapp.net",
+    });
+
+    expect(
+      normalizeOpenWaIncomingMessage({
+        message: {
+          from: "1@c.us",
+          caption: "LIEN cap",
+          fromMe: true,
+        },
+      }),
+    ).toMatchObject({
+      body: "LIEN cap",
+      chatId: "1@c.us",
+      fromMe: true,
+    });
+  });
+
+  it("détecte les groupes via kind ou suffixe @g.us", () => {
+    expect(
+      normalizeOpenWaIncomingMessage({
+        data: { from: "120363@g.us", body: "hi" },
+      }).isGroup,
+    ).toBe(true);
   });
 });
 

@@ -53,10 +53,12 @@ export function verifyOpenWaSignature(
   signatureHeader: string | null | undefined,
   secret: string,
 ): boolean {
-  if (!signatureHeader || !secret) return false;
+  const trimmedSecret = secret.trim();
+  const trimmedHeader = signatureHeader?.trim();
+  if (!trimmedHeader || !trimmedSecret) return false;
   const expected =
-    "sha256=" + createHmac("sha256", secret).update(rawBody).digest("hex");
-  const a = Buffer.from(signatureHeader);
+    "sha256=" + createHmac("sha256", trimmedSecret).update(rawBody).digest("hex");
+  const a = Buffer.from(trimmedHeader);
   const b = Buffer.from(expected);
   return a.length === b.length && timingSafeEqual(a, b);
 }
