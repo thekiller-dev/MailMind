@@ -26,10 +26,12 @@ describe("openwa.server helpers", () => {
   it("vérifie la signature HMAC OpenWA en timing-safe", () => {
     const body = '{"event":"message.received","data":{"body":"hi"}}';
     const secret = "test-secret";
-    const signature =
-      "sha256=" + createHmac("sha256", secret).update(body).digest("hex");
+    const digest = createHmac("sha256", secret).update(body).digest("hex");
+    const signature = `sha256=${digest}`;
     expect(verifyOpenWaSignature(body, signature, secret)).toBe(true);
     expect(verifyOpenWaSignature(body, ` ${signature} `, ` ${secret} `)).toBe(true);
+    expect(verifyOpenWaSignature(body, digest, secret)).toBe(true);
+    expect(verifyOpenWaSignature(body, `v1=${digest}`, secret)).toBe(true);
     expect(verifyOpenWaSignature(body, "sha256=deadbeef", secret)).toBe(false);
     expect(verifyOpenWaSignature(body, null, secret)).toBe(false);
   });
@@ -112,6 +114,21 @@ describe("normalizeOpenWaIncomingMessage", () => {
         data: { from: "120363@g.us", body: "hi" },
       }).isGroup,
     ).toBe(true);
+  });
+
+  it("accepte l’enveloppe nested payload (variante websocket)", () => {
+    expect(
+      normalizeOpenWaIncomingMessage({
+        payload: {
+          event: "message.received",
+          data: { from: "33611111111@c.us", body: "LIEN nested" },
+        },
+      }),
+    ).toMatchObject({
+      body: "LIEN nested",
+      chatId: "33611111111@c.us",
+      fromMe: false,
+    });
   });
 });
 

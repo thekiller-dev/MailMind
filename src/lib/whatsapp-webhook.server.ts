@@ -32,11 +32,18 @@ export type OpenWaWebhookBody = {
   data?: OpenWaMessageData | null;
   // Variantes rares / anciennes : message à la racine
   message?: OpenWaMessageData | null;
+  // Variante websocket-like (envelope nested)
+  payload?: {
+    event?: string;
+    sessionId?: string;
+    data?: OpenWaMessageData | null;
+    message?: OpenWaMessageData | null;
+  } | null;
 };
 
 /**
  * Normalise l’enveloppe OpenWA (`data` documenté) et les variantes réalistes
- * (`message`, `chatId` sans `from`, `text`/`caption` sans `body`).
+ * (`message`, `payload.data`, `chatId` sans `from`, `text`/`caption` sans `body`).
  */
 export function normalizeOpenWaIncomingMessage(payload: OpenWaWebhookBody): {
   body: string;
@@ -46,7 +53,8 @@ export function normalizeOpenWaIncomingMessage(payload: OpenWaWebhookBody): {
   displayName: string | null;
   messageId: string | null;
 } {
-  const data = payload.data ?? payload.message ?? null;
+  const nested = payload.payload ?? null;
+  const data = payload.data ?? payload.message ?? nested?.data ?? nested?.message ?? null;
   const rawBody =
     (typeof data?.body === "string" && data.body) ||
     (typeof data?.text === "string" && data.text) ||
@@ -152,12 +160,13 @@ export async function handleOpenWaMessageReceived(
   idempotencyKey: string,
 ): Promise<{ ok: true; duplicate?: boolean; ignored?: boolean; rateLimited?: boolean }> {
   const expectedSession = process.env.OPENWA_SESSION_ID?.trim();
-  if (expectedSession && payload.sessionId && payload.sessionId !== expectedSession) {
+  const receivedSession = payload.sessionId ?? payload.payload?.sessionId;
+  if (expectedSession && receivedSession && receivedSession !== expectedSession) {
     // OpenWA scope déjà les webhooks par session ; on journalise sans bloquer
     // pour éviter un faux négatif si OPENWA_SESSION_ID côté Vercel est décalé.
     console.warn("whatsapp webhook session mismatch", {
       expected: expectedSession,
-      received: payload.sessionId,
+      received: receivedSession,
     });
   }
 
@@ -170,8 +179,19 @@ export async function handleOpenWaMessageReceived(
     });
     return { ok: true, ignored: true };
   }
-  if (fromMe) return { ok: true, ignored: true };
-  if (isGroup) return { ok: true, ignored: true };
+  if (fromMe) {
+    console.warn("whatsapp webhook ignored: fromMe", {
+      chatIdSuffix: chatId.slice(-12),
+      bodyPreview: body.slice(0, 24),
+    });
+    return { ok: true, ignored: true };
+  }
+  if (isGroup) {
+    console.warn("whatsapp webhook ignored: group", {
+      chatIdSuffix: chatId.slice(-12),
+    });
+    return { ok: true, ignored: true };
+  }
 
   const { error: eventClaimError } = await supabase.from("whatsapp_delivery_events").insert({
     event_id: idempotencyKey,

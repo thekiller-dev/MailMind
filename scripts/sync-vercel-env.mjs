@@ -61,6 +61,11 @@ const KEYS = [
   "TOKEN_ENCRYPTION_KEY",
   "CRON_SECRET",
   "INBOUND_EMAIL_DOMAIN",
+  "OPENWA_BASE_URL",
+  "OPENWA_API_KEY",
+  "OPENWA_SESSION_ID",
+  "OPENWA_WEBHOOK_SECRET",
+  "OPENWA_WA_NUMBER",
 ];
 
 const productionOverrides = {
@@ -81,6 +86,8 @@ const sensitiveKeys = new Set([
   "TELEGRAM_WEBHOOK_SECRET",
   "TOKEN_ENCRYPTION_KEY",
   "CRON_SECRET",
+  "OPENWA_API_KEY",
+  "OPENWA_WEBHOOK_SECRET",
 ]);
 
 async function upsert(key, value, targets) {

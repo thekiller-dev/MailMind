@@ -48,19 +48,48 @@ export function phoneFromChatId(chatId: string): string | null {
   return digits || null;
 }
 
+/**
+ * OpenWA documente `X-OpenWA-Signature: sha256=<hex>` (HMAC du corps brut).
+ * On accepte aussi hex nu et préfixes `sha256=` / `v1=` / `v1,` pour tolérer
+ * les variantes rencontrées en prod / docs connexes.
+ */
+function normalizeOpenWaSignatureCandidates(header: string): string[] {
+  const trimmed = header.trim();
+  if (!trimmed) return [];
+  const candidates = new Set<string>([trimmed]);
+  for (const part of trimmed.split(/\s+/)) {
+    const token = part.trim();
+    if (!token) continue;
+    candidates.add(token);
+    const prefixed = /^(?:sha256=|v1=|v1,)(.+)$/i.exec(token);
+    if (prefixed?.[1]) candidates.add(prefixed[1].trim());
+  }
+  return [...candidates];
+}
+
+function timingSafeEqualString(a: string, b: string): boolean {
+  const left = Buffer.from(a);
+  const right = Buffer.from(b);
+  return left.length === right.length && timingSafeEqual(left, right);
+}
+
 export function verifyOpenWaSignature(
   rawBody: string | Buffer | Uint8Array,
   signatureHeader: string | null | undefined,
   secret: string,
 ): boolean {
   const trimmedSecret = secret.trim();
-  const trimmedHeader = signatureHeader?.trim();
-  if (!trimmedHeader || !trimmedSecret) return false;
-  const expected =
-    "sha256=" + createHmac("sha256", trimmedSecret).update(rawBody).digest("hex");
-  const a = Buffer.from(trimmedHeader);
-  const b = Buffer.from(expected);
-  return a.length === b.length && timingSafeEqual(a, b);
+  if (!trimmedSecret || !signatureHeader?.trim()) return false;
+
+  const digestHex = createHmac("sha256", trimmedSecret).update(rawBody).digest("hex");
+  const expectedVariants = [`sha256=${digestHex}`, digestHex, `v1=${digestHex}`];
+
+  for (const candidate of normalizeOpenWaSignatureCandidates(signatureHeader)) {
+    for (const expected of expectedVariants) {
+      if (timingSafeEqualString(candidate, expected)) return true;
+    }
+  }
+  return false;
 }
 
 export async function sendOpenWaText(chatId: string, text: string): Promise<void> {

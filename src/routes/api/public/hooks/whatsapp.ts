@@ -35,6 +35,8 @@ export const Route = createFileRoute("/api/public/hooks/whatsapp")({
           console.warn("whatsapp webhook unauthorized", {
             hasSignature: Boolean(signature),
             signaturePrefix: signature?.slice(0, 7) ?? null,
+            signatureLen: signature?.trim().length ?? 0,
+            secretLen: secret.length,
             bodyBytes: rawBody.length,
             eventHeader: request.headers.get("x-openwa-event"),
           });
@@ -49,7 +51,10 @@ export const Route = createFileRoute("/api/public/hooks/whatsapp")({
         }
 
         const eventName =
-          request.headers.get("x-openwa-event") ?? payload.event ?? "";
+          request.headers.get("x-openwa-event") ??
+          payload.event ??
+          payload.payload?.event ??
+          "";
         if (eventName === "test") {
           return Response.json({ ok: true, test: true });
         }
@@ -61,7 +66,7 @@ export const Route = createFileRoute("/api/public/hooks/whatsapp")({
           request.headers.get("x-openwa-idempotency-key") ??
           payload.idempotencyKey ??
           payload.deliveryId ??
-          `msg:${payload.data?.id ?? payload.message?.id ?? crypto.randomUUID()}`;
+          `msg:${payload.data?.id ?? payload.message?.id ?? payload.payload?.data?.id ?? payload.payload?.message?.id ?? crypto.randomUUID()}`;
 
         try {
           const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
