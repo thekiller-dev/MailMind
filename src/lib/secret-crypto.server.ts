@@ -4,9 +4,9 @@ const PREFIX = "enc:v1:";
 const ALGORITHM = "aes-256-gcm";
 
 function encryptionKey() {
-  const configured = process.env.TOKEN_ENCRYPTION_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const configured = process.env.TOKEN_ENCRYPTION_KEY;
   if (!configured) {
-    throw new Error("Missing TOKEN_ENCRYPTION_KEY or SUPABASE_SERVICE_ROLE_KEY");
+    throw new Error("Missing TOKEN_ENCRYPTION_KEY");
   }
   return createHash("sha256").update(configured).digest();
 }

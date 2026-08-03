@@ -1,14 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getRequest } from "@tanstack/react-start/server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
-import {
-  buildAuthUrl,
-  extractEmailAddress,
-  modifyMessage,
-  sendReply,
-  signState,
-} from "./gmail.server";
+import { buildAuthUrl, extractEmailAddress, modifyMessage, sendReply } from "./gmail.server";
 
 function normalizeOrigin(value: string): string {
   const url = new URL(value);
@@ -45,12 +38,8 @@ export const getGmailAuthUrl = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     const origin = resolveOAuthOrigin(data.origin.replace(/\/$/, ""));
     const redirectUri = `${origin}/api/gmail/callback`;
-    const state = signState({
-      user_id: context.userId,
-      nonce: crypto.randomUUID(),
-      exp: Math.floor(Date.now() / 1000) + 600,
-      origin,
-    });
+    const { createGmailOAuthState } = await import("./oauth-state.server");
+    const { state } = await createGmailOAuthState(context.userId, origin);
     return { url: buildAuthUrl(redirectUri, state), redirectUri };
   });
 
@@ -66,8 +55,14 @@ export const syncMyAccount = createServerFn({ method: "POST" })
       .eq("id", data.accountId)
       .single();
     if (!acc || acc.user_id !== context.userId) throw new Error("Forbidden");
-    const { syncGmailAccount } = await import("./gmail-sync.server");
-    return await syncGmailAccount(supabaseAdmin, data.accountId, { analyze: true });
+    const { enqueueGmailSync, processGmailSyncQueue } = await import("./gmail-sync-queue.server");
+    const queued = await enqueueGmailSync(supabaseAdmin, {
+      accountId: data.accountId,
+      trigger: "manual",
+      userId: context.userId,
+    });
+    const processed = await processGmailSyncQueue(supabaseAdmin, 1);
+    return { processed, queued };
   });
 
 export const disconnectAccount = createServerFn({ method: "POST" })
@@ -114,6 +109,25 @@ async function getOwnedMessage(userId: string, emailId: string) {
   };
 }
 
+async function auditEmailAction(
+  supabase: Awaited<ReturnType<typeof getOwnedMessage>>["supabaseAdmin"],
+  input: {
+    accountId: string | null;
+    action: "archive" | "report" | "reply";
+    emailId: string;
+    error?: string;
+    result: "success" | "failure";
+    userId: string;
+  },
+) {
+  try {
+    const { recordEmailAction } = await import("./audit.server");
+    await recordEmailAction(supabase, input);
+  } catch (error) {
+    console.error("Unable to record email action", error);
+  }
+}
+
 export const archiveEmail = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((data: unknown) => z.object({ emailId: z.string().uuid() }).parse(data))
@@ -122,14 +136,33 @@ export const archiveEmail = createServerFn({ method: "POST" })
       context.userId,
       data.emailId,
     );
-    await modifyMessage(accessToken, email.providerMessageId, "archive");
-    const { error } = await supabaseAdmin
-      .from("emails")
-      .update({ archived_at: new Date().toISOString() })
-      .eq("id", email.id)
-      .eq("user_id", context.userId);
-    if (error) throw error;
-    return { ok: true };
+    try {
+      await modifyMessage(accessToken, email.providerMessageId, "archive");
+      const { error } = await supabaseAdmin
+        .from("emails")
+        .update({ archived_at: new Date().toISOString() })
+        .eq("id", email.id)
+        .eq("user_id", context.userId);
+      if (error) throw error;
+      await auditEmailAction(supabaseAdmin, {
+        accountId: email.account_id,
+        action: "archive",
+        emailId: email.id,
+        result: "success",
+        userId: context.userId,
+      });
+      return { ok: true };
+    } catch (error) {
+      await auditEmailAction(supabaseAdmin, {
+        accountId: email.account_id,
+        action: "archive",
+        emailId: email.id,
+        error: error instanceof Error ? error.message : String(error),
+        result: "failure",
+        userId: context.userId,
+      });
+      throw error;
+    }
   });
 
 export const reportEmail = createServerFn({ method: "POST" })
@@ -140,14 +173,33 @@ export const reportEmail = createServerFn({ method: "POST" })
       context.userId,
       data.emailId,
     );
-    await modifyMessage(accessToken, email.providerMessageId, "spam");
-    const { error } = await supabaseAdmin
-      .from("emails")
-      .update({ reported_at: new Date().toISOString(), category: "Phishing" })
-      .eq("id", email.id)
-      .eq("user_id", context.userId);
-    if (error) throw error;
-    return { ok: true };
+    try {
+      await modifyMessage(accessToken, email.providerMessageId, "spam");
+      const { error } = await supabaseAdmin
+        .from("emails")
+        .update({ reported_at: new Date().toISOString(), category: "Phishing" })
+        .eq("id", email.id)
+        .eq("user_id", context.userId);
+      if (error) throw error;
+      await auditEmailAction(supabaseAdmin, {
+        accountId: email.account_id,
+        action: "report",
+        emailId: email.id,
+        result: "success",
+        userId: context.userId,
+      });
+      return { ok: true };
+    } catch (error) {
+      await auditEmailAction(supabaseAdmin, {
+        accountId: email.account_id,
+        action: "report",
+        emailId: email.id,
+        error: error instanceof Error ? error.message : String(error),
+        result: "failure",
+        userId: context.userId,
+      });
+      throw error;
+    }
   });
 
 export const sendEmailReply = createServerFn({ method: "POST" })
@@ -156,12 +208,34 @@ export const sendEmailReply = createServerFn({ method: "POST" })
     z.object({ emailId: z.string().uuid(), body: z.string().trim().min(1).max(10000) }).parse(data),
   )
   .handler(async ({ context, data }) => {
-    const { email, accessToken } = await getOwnedMessage(context.userId, data.emailId);
-    await sendReply(accessToken, {
-      threadId: email.threadId,
-      to: extractEmailAddress(email.sender),
-      subject: email.subject,
-      body: data.body,
-    });
-    return { ok: true };
+    const { supabaseAdmin, email, accessToken } = await getOwnedMessage(
+      context.userId,
+      data.emailId,
+    );
+    try {
+      await sendReply(accessToken, {
+        threadId: email.threadId,
+        to: extractEmailAddress(email.sender),
+        subject: email.subject,
+        body: data.body,
+      });
+      await auditEmailAction(supabaseAdmin, {
+        accountId: email.account_id,
+        action: "reply",
+        emailId: email.id,
+        result: "success",
+        userId: context.userId,
+      });
+      return { ok: true };
+    } catch (error) {
+      await auditEmailAction(supabaseAdmin, {
+        accountId: email.account_id,
+        action: "reply",
+        emailId: email.id,
+        error: error instanceof Error ? error.message : String(error),
+        result: "failure",
+        userId: context.userId,
+      });
+      throw error;
+    }
   });

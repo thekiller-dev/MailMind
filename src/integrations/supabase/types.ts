@@ -8,6 +8,162 @@ export type Database = {
   };
   public: {
     Tables: {
+      oauth_states: {
+        Row: {
+          consumed_at: string | null;
+          created_at: string;
+          expires_at: string;
+          nonce_hash: string;
+          origin: string;
+          user_id: string;
+        };
+        Insert: {
+          consumed_at?: string | null;
+          created_at?: string;
+          expires_at: string;
+          nonce_hash: string;
+          origin: string;
+          user_id: string;
+        };
+        Update: {
+          consumed_at?: string | null;
+          created_at?: string;
+          expires_at?: string;
+          nonce_hash?: string;
+          origin?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      sync_runs: {
+        Row: {
+          account_id: string;
+          created_at: string;
+          error: string | null;
+          finished_at: string | null;
+          history_id_end: string | null;
+          history_id_start: string | null;
+          id: string;
+          idempotency_key: string;
+          messages_analyzed: number;
+          messages_inserted: number;
+          messages_listed: number;
+          metadata: Json;
+          queue_message_id: number | null;
+          started_at: string | null;
+          status: string;
+          trigger: string;
+          user_id: string;
+        };
+        Insert: {
+          account_id: string;
+          created_at?: string;
+          error?: string | null;
+          finished_at?: string | null;
+          history_id_end?: string | null;
+          history_id_start?: string | null;
+          id?: string;
+          idempotency_key: string;
+          messages_analyzed?: number;
+          messages_inserted?: number;
+          messages_listed?: number;
+          metadata?: Json;
+          queue_message_id?: number | null;
+          started_at?: string | null;
+          status?: string;
+          trigger: string;
+          user_id: string;
+        };
+        Update: {
+          account_id?: string;
+          created_at?: string;
+          error?: string | null;
+          finished_at?: string | null;
+          history_id_end?: string | null;
+          history_id_start?: string | null;
+          id?: string;
+          idempotency_key?: string;
+          messages_analyzed?: number;
+          messages_inserted?: number;
+          messages_listed?: number;
+          metadata?: Json;
+          queue_message_id?: number | null;
+          started_at?: string | null;
+          status?: string;
+          trigger?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      email_actions: {
+        Row: {
+          account_id: string | null;
+          action: string;
+          actor: string;
+          created_at: string;
+          email_id: string;
+          error: string | null;
+          id: string;
+          idempotency_key: string;
+          result: string;
+          user_id: string;
+        };
+        Insert: {
+          account_id?: string | null;
+          action: string;
+          actor?: string;
+          created_at?: string;
+          email_id: string;
+          error?: string | null;
+          id?: string;
+          idempotency_key: string;
+          result: string;
+          user_id: string;
+        };
+        Update: {
+          account_id?: string | null;
+          action?: string;
+          actor?: string;
+          created_at?: string;
+          email_id?: string;
+          error?: string | null;
+          id?: string;
+          idempotency_key?: string;
+          result?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      usage_events: {
+        Row: {
+          created_at: string;
+          event_type: string;
+          id: string;
+          metadata: Json;
+          quantity: number;
+          source: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          event_type: string;
+          id?: string;
+          metadata?: Json;
+          quantity?: number;
+          source: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          event_type?: string;
+          id?: string;
+          metadata?: Json;
+          quantity?: number;
+          source?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       telegram_connections: {
         Row: {
           chat_id: number | null;
@@ -312,7 +468,59 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      consume_oauth_state: {
+        Args: {
+          p_nonce_hash: string;
+          p_origin: string;
+        };
+        Returns: string | null;
+      };
+      consume_usage_quota: {
+        Args: {
+          p_daily_limit: number;
+          p_event_type: string;
+          p_metadata?: Json;
+          p_minute_limit: number;
+          p_quantity?: number;
+          p_source: string;
+          p_user_id: string;
+        };
+        Returns: boolean;
+      };
+    };
+    Enums: {
       [_ in never]: never;
+    };
+    CompositeTypes: {
+      [_ in never]: never;
+    };
+  };
+  pgmq_public: {
+    Tables: {
+      [_ in never]: never;
+    };
+    Views: {
+      [_ in never]: never;
+    };
+    Functions: {
+      archive: {
+        Args: { message_id: number; queue_name: string };
+        Returns: boolean;
+      };
+      read: {
+        Args: { n: number; queue_name: string; sleep_seconds: number };
+        Returns: {
+          enqueued_at: string;
+          message: Json;
+          msg_id: number;
+          read_ct: number;
+          vt: string;
+        }[];
+      };
+      send: {
+        Args: { message: Json; queue_name: string; sleep_seconds?: number };
+        Returns: number;
+      };
     };
     Enums: {
       [_ in never]: never;

@@ -8,6 +8,7 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+.pnpm-store/
 dist
 dist-ssr
 .output
@@ -35,9 +36,13 @@ supabase/.temp/
 *.sln
 *.sw?
 .vercel
-
-.vercel
 .env*
+!.env.example
+
+# Playwright
+.playwright/
+playwright-report/
+test-results/
 
 # Google Cloud service account keys (RISC / local only — never commit)
 mailmind-*-*.json

@@ -1,5 +1,9 @@
 project_id = "udfkcqhuhqpunvlhgpdc"
 
+[api]
+enabled = true
+schemas = ["public", "graphql_public", "pgmq_public"]
+
 [functions.resend-inbound]
 verify_jwt = false
 

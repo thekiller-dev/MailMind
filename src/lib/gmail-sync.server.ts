@@ -1,10 +1,18 @@
 // Server-only: synchronise Gmail account into public.emails and analyse new items.
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { fetchMessage, listMessageIds, refreshAccessToken } from "./gmail.server";
+import {
+  fetchMessage,
+  getGmailHistoryId,
+  GmailHistoryExpiredError,
+  listHistoryMessageIds,
+  listMessageIds,
+  refreshAccessToken,
+} from "./gmail.server";
 import { analyzeEmailContent } from "./email-analysis.server";
 import { decryptSecret, encryptSecret, isEncryptedSecret } from "./secret-crypto.server";
 import { buildPreferenceAnalysis, getPreferenceList, matchesSenderList } from "./business-rules";
 import { notifyEmailAnalysis } from "./telegram-notify.server";
+import { isWithinQuietHours } from "./analysis-settings";
 
 interface AccountRow {
   id: string;
@@ -14,6 +22,7 @@ interface AccountRow {
   access_token: string | null;
   refresh_token: string | null;
   token_expires_at: string | null;
+  history_id?: string | null;
 }
 
 export async function ensureFreshToken(
@@ -58,7 +67,7 @@ export async function syncGmailAccount(
 ) {
   const { data: acc, error: accErr } = await supabase
     .from("email_accounts")
-    .select("id,user_id,email,provider,access_token,refresh_token,token_expires_at")
+    .select("id,user_id,email,provider,access_token,refresh_token,token_expires_at,history_id")
     .eq("id", accountId)
     .single();
   if (accErr || !acc) throw new Error(accErr?.message ?? "account not found");
@@ -71,12 +80,28 @@ export async function syncGmailAccount(
     .eq("user_id", account.user_id)
     .maybeSingle();
   const settings = settingsRow?.settings;
+  const notificationsPaused = isWithinQuietHours(settings);
 
   try {
     const accessToken = await ensureFreshToken(supabase, account);
     const configuredMax = Number(process.env.GMAIL_SYNC_MAX_MESSAGES ?? 100);
     const maxMessages = Math.min(Math.max(opts.maxMessages ?? configuredMax, 1), 500);
-    const ids = await listMessageIds(accessToken, { maxResults: maxMessages });
+    let nextHistoryId: string;
+    let ids: string[];
+    if (account.history_id) {
+      try {
+        const history = await listHistoryMessageIds(accessToken, account.history_id);
+        ids = history.messageIds;
+        nextHistoryId = history.historyId;
+      } catch (error) {
+        if (!(error instanceof GmailHistoryExpiredError)) throw error;
+        nextHistoryId = await getGmailHistoryId(accessToken);
+        ids = await listMessageIds(accessToken, { maxResults: maxMessages });
+      }
+    } else {
+      nextHistoryId = await getGmailHistoryId(accessToken);
+      ids = await listMessageIds(accessToken, { maxResults: maxMessages });
+    }
 
     let inserted = 0;
     let analyzed = 0;
@@ -165,6 +190,7 @@ export async function syncGmailAccount(
           .eq("id", emailRowId);
         analyzed++;
         try {
+          if (notificationsPaused) continue;
           await notifyEmailAnalysis(supabase, account.user_id, {
             id: emailRowId,
             sender: msgSender,
@@ -182,11 +208,20 @@ export async function syncGmailAccount(
 
       if (opts.analyze !== false && emailRowId && !alreadyAnalyzed) {
         try {
-          const a = await analyzeEmailContent({
-            sender: msgSender,
-            subject: msgSubject,
-            body: msgBody,
-          });
+          const a = await analyzeEmailContent(
+            {
+              sender: msgSender,
+              subject: msgSubject,
+              body: msgBody,
+            },
+            {
+              emailId: emailRowId,
+              settings,
+              source: "gmail_sync",
+              supabase,
+              userId: account.user_id,
+            },
+          );
           await supabase
             .from("emails")
             .update({
@@ -202,6 +237,7 @@ export async function syncGmailAccount(
             .eq("id", emailRowId);
           analyzed++;
           try {
+            if (notificationsPaused) continue;
             await notifyEmailAnalysis(supabase, account.user_id, {
               id: emailRowId,
               sender: msgSender,
@@ -224,6 +260,7 @@ export async function syncGmailAccount(
       .from("email_accounts")
       .update({
         last_synced_at: new Date().toISOString(),
+        history_id: nextHistoryId,
         status: "connected",
         error: errors.length ? errors.slice(0, 3).join(" | ") : null,
       })

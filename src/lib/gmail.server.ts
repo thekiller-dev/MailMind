@@ -1,5 +1,4 @@
 // Server-only Gmail OAuth + API helpers.
-import { createHmac, timingSafeEqual } from "node:crypto";
 import { htmlToText } from "./email-content";
 
 const GOOGLE_AUTH = "https://accounts.google.com/o/oauth2/v2/auth";
@@ -14,43 +13,6 @@ export const GMAIL_SCOPES = [
   "https://www.googleapis.com/auth/gmail.modify",
   "https://www.googleapis.com/auth/gmail.send",
 ].join(" ");
-
-function stateSecret(): string {
-  const s = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_JWKS || "";
-  if (!s) throw new Error("Missing signing key for OAuth state");
-  return s;
-}
-
-export function signState(payload: {
-  user_id: string;
-  nonce: string;
-  exp: number;
-  origin: string;
-}): string {
-  const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
-  const sig = createHmac("sha256", stateSecret()).update(body).digest("base64url");
-  return `${body}.${sig}`;
-}
-
-export function verifyState(state: string): { user_id: string; origin: string } | null {
-  const [body, sig] = state.split(".");
-  if (!body || !sig) return null;
-  const expected = createHmac("sha256", stateSecret()).update(body).digest("base64url");
-  const a = Buffer.from(sig);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
-  try {
-    const p = JSON.parse(Buffer.from(body, "base64url").toString("utf8")) as {
-      user_id: string;
-      exp: number;
-      origin: string;
-    };
-    if (Date.now() / 1000 > p.exp || !p.user_id || !p.origin) return null;
-    return { user_id: p.user_id, origin: p.origin };
-  } catch {
-    return null;
-  }
-}
 
 export function requireGoogleEnv() {
   const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
@@ -152,6 +114,63 @@ export async function listMessageIds(
   }
 
   return ids.slice(0, requested);
+}
+
+export class GmailHistoryExpiredError extends Error {
+  constructor() {
+    super("Gmail history cursor expired");
+    this.name = "GmailHistoryExpiredError";
+  }
+}
+
+export async function getGmailHistoryId(accessToken: string): Promise<string> {
+  const res = await fetch(`${GMAIL_API}/profile`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) throw new Error(`Gmail profile failed: ${res.status}`);
+  const profile = (await res.json()) as { historyId?: string };
+  if (!profile.historyId) throw new Error("Gmail profile has no history ID");
+  return profile.historyId;
+}
+
+export async function listHistoryMessageIds(
+  accessToken: string,
+  startHistoryId: string,
+): Promise<{ historyId: string; messageIds: string[] }> {
+  const ids = new Set<string>();
+  let pageToken: string | undefined;
+  let latestHistoryId = startHistoryId;
+
+  do {
+    const params = new URLSearchParams({
+      historyTypes: "messageAdded",
+      labelId: "INBOX",
+      maxResults: "500",
+      startHistoryId,
+    });
+    if (pageToken) params.set("pageToken", pageToken);
+    const res = await fetch(`${GMAIL_API}/history?${params}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (res.status === 404) throw new GmailHistoryExpiredError();
+    if (!res.ok) throw new Error(`Gmail history failed: ${res.status}`);
+    const data = (await res.json()) as {
+      history?: {
+        messagesAdded?: { message?: { id?: string } }[];
+      }[];
+      historyId?: string;
+      nextPageToken?: string;
+    };
+    for (const entry of data.history ?? []) {
+      for (const added of entry.messagesAdded ?? []) {
+        if (added.message?.id) ids.add(added.message.id);
+      }
+    }
+    latestHistoryId = data.historyId ?? latestHistoryId;
+    pageToken = data.nextPageToken;
+  } while (pageToken);
+
+  return { historyId: latestHistoryId, messageIds: [...ids] };
 }
 
 export interface GmailMessage {

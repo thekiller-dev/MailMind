@@ -1,34 +1,51 @@
-import { beforeEach, describe, expect, it } from "vitest";
-import { extractEmailAddress, signState, verifyState } from "./gmail.server";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  extractEmailAddress,
+  GmailHistoryExpiredError,
+  listHistoryMessageIds,
+} from "./gmail.server";
 
 describe("Gmail OAuth helpers", () => {
-  beforeEach(() => {
-    process.env.SUPABASE_SERVICE_ROLE_KEY = "test-oauth-state-secret";
-  });
-
-  it("signs and verifies a non-expired OAuth state", () => {
-    const state = signState({
-      user_id: "user-1",
-      nonce: "nonce-1",
-      exp: Math.floor(Date.now() / 1000) + 60,
-      origin: "http://localhost:5000",
-    });
-    expect(verifyState(state)).toEqual({ user_id: "user-1", origin: "http://localhost:5000" });
-  });
-
-  it("rejects expired or modified OAuth states", () => {
-    const expired = signState({
-      user_id: "user-1",
-      nonce: "nonce-1",
-      exp: Math.floor(Date.now() / 1000) - 1,
-      origin: "http://localhost:5000",
-    });
-    expect(verifyState(expired)).toBeNull();
-    expect(verifyState(`${expired}x`)).toBeNull();
-  });
+  afterEach(() => vi.unstubAllGlobals());
 
   it("extracts an address from a From header", () => {
     expect(extractEmailAddress("Sarah Jenkins <sarah@northwind.co>")).toBe("sarah@northwind.co");
     expect(extractEmailAddress("plain@example.com")).toBe("plain@example.com");
+  });
+
+  it("deduplicates added messages across Gmail history pages", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        Response.json({
+          history: [{ messagesAdded: [{ message: { id: "m1" } }] }],
+          historyId: "11",
+          nextPageToken: "next",
+        }),
+      )
+      .mockResolvedValueOnce(
+        Response.json({
+          history: [
+            {
+              messagesAdded: [{ message: { id: "m1" } }, { message: { id: "m2" } }],
+            },
+          ],
+          historyId: "12",
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(listHistoryMessageIds("token", "10")).resolves.toEqual({
+      historyId: "12",
+      messageIds: ["m1", "m2"],
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("signals an expired Gmail history cursor", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 404 })));
+    await expect(listHistoryMessageIds("token", "expired")).rejects.toBeInstanceOf(
+      GmailHistoryExpiredError,
+    );
   });
 });

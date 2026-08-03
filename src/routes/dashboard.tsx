@@ -10,19 +10,24 @@ import {
 } from "lucide-react";
 import { AppShell, EmptyState } from "@/components/AppShell";
 import { ProviderIcon } from "@/components/ProviderIcons";
-import { TelegramMetricsChart } from "@/components/TelegramMetricsChart";
 import { useAccounts, useEmails } from "@/lib/data-hooks";
-import {
-  Area,
-  AreaChart,
-  Cell,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { lazy, Suspense } from "react";
+
+const DashboardFlowChart = lazy(() =>
+  import("@/components/dashboard/DashboardCharts").then((module) => ({
+    default: module.DashboardFlowChart,
+  })),
+);
+const DashboardDistributionChart = lazy(() =>
+  import("@/components/dashboard/DashboardCharts").then((module) => ({
+    default: module.DashboardDistributionChart,
+  })),
+);
+const TelegramMetricsChart = lazy(() =>
+  import("@/components/TelegramMetricsChart").then((module) => ({
+    default: module.TelegramMetricsChart,
+  })),
+);
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -141,53 +146,15 @@ function Dashboard() {
               </span>
             </div>
             <div className="h-64 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={flowData} margin={{ top: 8, right: 4, left: -28, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="dashboardFlow" x1="0" x2="0" y1="0" y2="1">
-                      <stop offset="0%" stopColor="#22d3ee" stopOpacity={0.28} />
-                      <stop offset="100%" stopColor="#22d3ee" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis
-                    dataKey="day"
-                    tick={{ fill: "#737373", fontSize: 10 }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    allowDecimals={false}
-                    tick={{ fill: "#737373", fontSize: 10 }}
-                    axisLine={false}
-                    tickLine={false}
-                    width={28}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      background: "#0a0a0a",
-                      border: "1px solid #292929",
-                      borderRadius: 10,
-                      fontSize: 11,
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="messages"
-                    name="Messages"
-                    stroke="#22d3ee"
-                    strokeWidth={2.5}
-                    fill="url(#dashboardFlow)"
-                    dot={{ r: 3, fill: "#22d3ee", strokeWidth: 0 }}
-                    activeDot={{ r: 5, fill: "#0a0a0a", stroke: "#22d3ee", strokeWidth: 2 }}
-                    isAnimationActive
-                    animationDuration={1200}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+              <Suspense fallback={<ChartFallback />}>
+                <DashboardFlowChart data={flowData} />
+              </Suspense>
             </div>
           </div>
           <div className="rounded-3xl glass p-6 sm:p-8 lg:col-span-2">
-            <TelegramMetricsChart compact />
+            <Suspense fallback={<ChartFallback />}>
+              <TelegramMetricsChart compact />
+            </Suspense>
           </div>
 
           <div className="rounded-3xl glass p-6 sm:p-8">
@@ -204,39 +171,9 @@ function Dashboard() {
               <p className="py-12 text-center text-sm text-muted-foreground">Aucune catégorie.</p>
             ) : (
               <div className="h-56">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={distribution}
-                      dataKey="count"
-                      nameKey="name"
-                      innerRadius={55}
-                      outerRadius={82}
-                      paddingAngle={3}
-                      stroke="none"
-                      isAnimationActive
-                      animationDuration={1200}
-                    >
-                      {distribution.map((entry, index) => (
-                        <Cell
-                          key={entry.name}
-                          fill={categoryColors[index % categoryColors.length]}
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{
-                        background: "var(--card)",
-                        color: "var(--foreground)",
-                        border: "1px solid var(--border)",
-                        borderRadius: 10,
-                        fontSize: 11,
-                      }}
-                      labelStyle={{ color: "var(--foreground)" }}
-                      itemStyle={{ color: "var(--foreground)" }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
+                <Suspense fallback={<ChartFallback />}>
+                  <DashboardDistributionChart data={distribution} />
+                </Suspense>
               </div>
             )}
             <div className="mt-2 flex flex-wrap gap-x-3 gap-y-2">
@@ -351,6 +288,16 @@ function Dashboard() {
         </div>
       </div>
     </AppShell>
+  );
+}
+
+function ChartFallback() {
+  return (
+    <div
+      className="h-full w-full animate-pulse rounded-2xl bg-surface-muted"
+      role="status"
+      aria-label="Chargement du graphique"
+    />
   );
 }
 

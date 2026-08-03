@@ -14,6 +14,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
+import { toast } from "sonner";
 import { Logo } from "./SiteNav";
 import { ThemeToggle } from "./ThemeToggle";
 import { supabase } from "@/integrations/supabase/client";
@@ -39,14 +40,13 @@ const STORAGE_KEY = "mailmind:sidebar-collapsed";
 export function AppShell({ children, title }: { children: ReactNode; title: string }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
-  const { user } = useUser();
-  const { emails } = useEmails();
-  const { accounts } = useAccounts();
+  const { user, loading: userLoading, error: userError } = useUser();
+  const { emails, error: emailsError } = useEmails();
+  const { accounts, error: accountsError } = useAccounts();
 
   const [collapsed, setCollapsed] = useState<boolean>(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const [authState, setAuthState] = useState<"checking" | "authed" | "anon">("checking");
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -57,26 +57,13 @@ export function AppShell({ children, title }: { children: ReactNode; title: stri
   }, [collapsed]);
   useEffect(() => setMobileOpen(false), [pathname]);
 
-  // Gate rendering on the session so unauthenticated users never see the shell,
-  // and react to sign-out / token expiry (including from another tab).
   useEffect(() => {
-    let alive = true;
-    const resolve = (hasSession: boolean) => {
-      if (!alive) return;
-      if (hasSession) {
-        setAuthState("authed");
-      } else {
-        setAuthState("anon");
-        navigate({ to: "/auth" });
-      }
-    };
-    supabase.auth.getSession().then(({ data }) => resolve(!!data.session));
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => resolve(!!session));
-    return () => {
-      alive = false;
-      sub.subscription.unsubscribe();
-    };
-  }, [navigate]);
+    if (!userLoading && !user) void navigate({ to: "/auth" });
+  }, [navigate, user, userLoading]);
+  useEffect(() => {
+    const error = userError ?? emailsError ?? accountsError;
+    if (error) toast.error("Impossible de charger les données", { description: error.message });
+  }, [accountsError, emailsError, userError]);
 
   const counts = {
     inbox: emails.length,
@@ -105,7 +92,7 @@ export function AppShell({ children, title }: { children: ReactNode; title: stri
 
   const sidebarWidth = collapsed ? "w-16" : "w-60";
 
-  if (authState !== "authed") {
+  if (userLoading || !user) {
     return (
       <div className="grid min-h-screen place-items-center bg-background">
         <div className="size-6 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-foreground" />

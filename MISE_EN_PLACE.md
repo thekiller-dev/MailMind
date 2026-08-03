@@ -24,6 +24,10 @@ AI_BASE_URL=https://api.imole.app/v1
 AI_AUTH_HEADER=Authorization
 AI_AUTH_PREFIX=Bearer
 TOKEN_ENCRYPTION_KEY=
+AI_BODY_MAX_CHARS=4000
+AI_DAILY_ANALYZE_QUOTA=100
+AI_DAILY_REPLY_QUOTA=20
+AI_RATE_LIMIT_PER_MINUTE=10
 CRON_SECRET=
 RESEND_API_KEY=
 RESEND_WEBHOOK_SECRET=
@@ -137,28 +141,35 @@ Ne pas reutiliser les identifiants de plusieurs environnements.
 
 ## 3. Appliquer la migration SQL
 
-La migration ajoute :
+Les migrations ajoutent notamment :
 
 - `risk_reason`, `archived_at` et `reported_at` dans `public.emails`.
 - La table `public.user_settings`.
 - Les métadonnées nécessaires aux adresses privées de transfert.
 - Les index necessaires.
 - Les politiques RLS des preferences utilisateur.
+- Les états OAuth Gmail à usage unique.
+- Les journaux `sync_runs`, `email_actions` et `usage_events`.
+- La queue durable `gmail_sync_jobs` fondée sur `pgmq`.
+- Les RPC de consommation atomique des états OAuth et quotas IA, réservées au `service_role`.
 
 Depuis le projet configure avec le bon environnement Supabase :
 
 ```bash
-npx supabase login
-npx supabase link --project-ref udfkcqhuhqpunvlhgpdc
-npx supabase db push
+pnpm exec supabase login
+pnpm exec supabase link --project-ref udfkcqhuhqpunvlhgpdc
+pnpm exec supabase db push
 ```
 
 Le login nécessite un access token Supabase. Il peut aussi être fourni temporairement via la variable `SUPABASE_ACCESS_TOKEN`.
 
-Verifier ensuite que la migration suivante est bien appliquee :
+Vérifier ensuite que les migrations versionnées sont bien appliquées, en
+particulier :
 
 ```text
 supabase/migrations/20260722220000_harden_mailmind.sql
+supabase/migrations/20260802183000_add_oauth_states.sql
+supabase/migrations/20260802183100_add_audit_usage_and_queues.sql
 ```
 
 ## 4. Configurer la réception Resend
@@ -173,11 +184,11 @@ Dans Resend :
 Déployer et configurer l'Edge Function :
 
 ```bash
-npx supabase secrets set RESEND_API_KEY=... RESEND_WEBHOOK_SECRET=...
-npx supabase secrets set AI_API_KEY=... AI_BASE_URL=https://api.imole.app/v1
-npx supabase secrets set AI_AUTH_HEADER=Authorization AI_AUTH_PREFIX=Bearer
-npx supabase secrets set AI_ANALYSIS_MODEL=gpt-4o-mini
-npx supabase functions deploy resend-inbound
+pnpm exec supabase secrets set RESEND_API_KEY=... RESEND_WEBHOOK_SECRET=...
+pnpm exec supabase secrets set AI_API_KEY=... AI_BASE_URL=https://api.imole.app/v1
+pnpm exec supabase secrets set AI_AUTH_HEADER=Authorization AI_AUTH_PREFIX=Bearer
+pnpm exec supabase secrets set AI_ANALYSIS_MODEL=gpt-4o-mini
+pnpm exec supabase functions deploy resend-inbound
 ```
 
 Les variables `SUPABASE_URL` et `SUPABASE_SERVICE_ROLE_KEY` sont fournies automatiquement aux Edge Functions déployées.
@@ -215,14 +226,14 @@ Dans Telegram, ouvrir `@BotFather` :
 Configurer les secrets Supabase :
 
 ```bash
-npx supabase secrets set TELEGRAM_BOT_TOKEN=... TELEGRAM_BOT_USERNAME=...
-npx supabase secrets set TELEGRAM_WEBHOOK_SECRET=...
+pnpm exec supabase secrets set TELEGRAM_BOT_TOKEN=... TELEGRAM_BOT_USERNAME=...
+pnpm exec supabase secrets set TELEGRAM_WEBHOOK_SECRET=...
 ```
 
 Déployer la fonction :
 
 ```bash
-npx supabase functions deploy telegram-webhook --no-verify-jwt
+pnpm exec supabase functions deploy telegram-webhook --no-verify-jwt
 ```
 
 Puis enregistrer le webhook Telegram, depuis une machine qui possède le token :
@@ -246,19 +257,22 @@ réduite peut ne pas correspondre exactement à l'heure locale choisie par tous
 les utilisateurs ; le planning local précis nécessite un plan Vercel
 compatible avec les cron jobs fréquents. Cette route exige `CRON_SECRET`.
 
-## 7. Synchronisation Gmail historique (optionnelle)
+## 7. Synchronisation Gmail durable
 
-Le endpoint suivant est protege par `CRON_SECRET` :
+Le endpoint suivant est protege par `CRON_SECRET` (GET ou POST, compatible Vercel Cron) :
 
 ```text
-POST /api/public/hooks/sync-emails
+/api/public/hooks/sync-emails
 ```
+
+Il enqueue les comptes à synchroniser dans `gmail_sync_jobs` (pgmq), puis traite un lot avec retries/backoff. La sync utilise Gmail History API quand un `history_id` est disponible, avec repli sur un scan borné.
 
 Le fichier `vercel.json` demande une execution quotidienne a 03:00 UTC, compatible avec le plan Vercel Hobby. Une frequence plus elevee necessite Vercel Pro ou un ordonnanceur externe. Verifier que :
 
 - `CRON_SECRET` est defini dans l'environnement de production.
 - Le fournisseur de deployement active bien les cron jobs.
 - Le endpoint recoit `Authorization: Bearer <CRON_SECRET>` ou `x-cron-secret`.
+- Les migrations `oauth_states` / `audit_usage_and_queues` sont appliquées avant activation.
 
 ## 8. Verifier les fonctionnalites
 
@@ -282,13 +296,16 @@ Apres demarrage de l'application :
 
 ```bash
 pnpm install --frozen-lockfile
-pnpm run lint
-pnpm exec tsc --noEmit
-pnpm run build
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
+pnpm exec playwright install --with-deps chromium
+pnpm test:e2e
 pnpm audit
 ```
 
-Le build peut encore signaler un bundle client superieur a 500 Ko. Ce warning n'empeche pas le build, mais devra etre traite plus tard avec un decoupage de code supplementaire.
+Le build peut encore signaler un bundle client superieur a 500 Ko (chunk Recharts). Les graphiques landing/dashboard sont déjà lazy-loadés ; ce warning n'empeche pas le build.
 
 ## 10. Deploiement
 

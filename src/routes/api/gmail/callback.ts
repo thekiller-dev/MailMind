@@ -1,5 +1,6 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
-import { exchangeCode, fetchUserinfo, verifyState } from "@/lib/gmail.server";
+import { createFileRoute } from "@tanstack/react-router";
+import { exchangeCode, fetchUserinfo } from "@/lib/gmail.server";
+import { consumeGmailOAuthState } from "@/lib/oauth-state.server";
 import { encryptSecret } from "@/lib/secret-crypto.server";
 
 export const Route = createFileRoute("/api/gmail/callback")({
@@ -19,11 +20,10 @@ export const Route = createFileRoute("/api/gmail/callback")({
 
         if (err) return back(`error:${err}`);
         if (!code || !state) return back("error:missing_params");
-        const verified = verifyState(state);
-        if (!verified) return back("error:invalid_state");
-        if (verified.origin !== origin) return back("error:invalid_origin");
 
         try {
+          const userId = await consumeGmailOAuthState(state, origin);
+          if (!userId) return back("error:invalid_state");
           const redirectUri = `${origin}/api/gmail/callback`;
           const tokens = await exchangeCode(code, redirectUri);
           const info = await fetchUserinfo(tokens.access_token);
@@ -32,7 +32,7 @@ export const Route = createFileRoute("/api/gmail/callback")({
           const tokenExpiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
 
           const accountPayload = {
-            user_id: verified.user_id,
+            user_id: userId,
             provider: "google",
             provider_account_id: info.sub,
             email: info.email,
@@ -84,16 +84,19 @@ export const Route = createFileRoute("/api/gmail/callback")({
             }
           }
 
-          // Initial scan. Must be awaited: on serverless the function is frozen
-          // once the response is returned, so a fire-and-forget task would be
-          // killed mid-sync and the dashboard would stay empty until the cron.
           const accountId = upsert.data.id;
           try {
-            const { syncGmailAccount } = await import("@/lib/gmail-sync.server");
-            await syncGmailAccount(supabaseAdmin, accountId, { analyze: true });
+            const { enqueueGmailSync, processGmailSyncQueue } =
+              await import("@/lib/gmail-sync-queue.server");
+            await enqueueGmailSync(supabaseAdmin, {
+              accountId,
+              trigger: "oauth",
+              userId,
+            });
+            await processGmailSyncQueue(supabaseAdmin, 1);
           } catch (e) {
-            // Non-fatal: the account is connected; the cron will retry the sync.
-            console.error("initial sync failed", e);
+            // Non-fatal: the account is connected; the cron will enqueue it again.
+            console.error("initial sync enqueue failed", e);
           }
 
           return new Response(null, {
