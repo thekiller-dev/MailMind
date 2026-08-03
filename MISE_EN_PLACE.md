@@ -73,7 +73,7 @@ MailMind utilise d’abord l’API Gmail OAuth (`gmail.modify` + `gmail.send`) :
 1. Paramètres → **Ajouter un compte Gmail**.
 2. Autoriser MailMind dans Google.
 3. Sync initiale au callback, puis sync manuelle ou cron quotidien (`0 3 * * *` sur Hobby).
-4. Les alertes Telegram urgentes/phishing sont envoyées après l’analyse OAuth (variable `TELEGRAM_BOT_TOKEN` obligatoire aussi côté **Vercel**, pas seulement Supabase).
+4. Les alertes Telegram / WhatsApp urgentes/phishing sont envoyées après l’analyse OAuth (`TELEGRAM_BOT_TOKEN` et `OPENWA_*` obligatoires aussi côté **Vercel**, pas seulement Supabase).
 
 Scopes OAuth mail (client Google Cloud dédié aux boîtes) :
 
@@ -252,10 +252,53 @@ Commandes disponibles après liaison :
 
 Les alertes urgentes et phishing sont envoyées après analyse. Pour rester
 compatible avec Vercel Hobby, le digest Telegram est déclenché une fois par
-jour à 08:00 UTC via `/api/public/hooks/telegram-digest`. Cette précision
-réduite peut ne pas correspondre exactement à l'heure locale choisie par tous
-les utilisateurs ; le planning local précis nécessite un plan Vercel
-compatible avec les cron jobs fréquents. Cette route exige `CRON_SECRET`.
+jour à 08:00 UTC via `/api/public/hooks/telegram-digest` (ce cron envoie aussi
+les digests WhatsApp). Cette précision réduite peut ne pas correspondre
+exactement à l'heure locale choisie par tous les utilisateurs ; le planning
+local précis nécessite un plan Vercel compatible avec les cron jobs fréquents.
+Cette route exige `CRON_SECRET`.
+
+## 6bis. Configurer WhatsApp (OpenWA)
+
+MailMind ne lance **pas** de session WhatsApp locale. Il parle en HTTP à un
+serveur [OpenWA](https://www.open-wa.org/) déjà authentifié.
+
+Variables Vercel / `.env` :
+
+| Variable | Rôle |
+| --- | --- |
+| `OPENWA_BASE_URL` | URL du gateway (ex. `https://openwa.example.com`) |
+| `OPENWA_API_KEY` | Clé API (`X-API-Key`), rôle OPERATOR pour l’envoi |
+| `OPENWA_SESSION_ID` | ID de session WhatsApp côté OpenWA |
+| `OPENWA_WEBHOOK_SECRET` | Secret HMAC du webhook (identique à celui créé dans OpenWA) |
+| `OPENWA_WA_NUMBER` | Numéro E.164 sans `+` pour les liens `wa.me` (optionnel) |
+
+Appliquer la migration locale `20260803120000_add_whatsapp_integration.sql`.
+
+Enregistrer le webhook OpenWA (session déjà connectée) :
+
+```bash
+curl -X POST "$OPENWA_BASE_URL/api/sessions/$OPENWA_SESSION_ID/webhooks" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $OPENWA_API_KEY" \
+  -d '{
+    "url": "https://www.mailmind.me/api/public/hooks/whatsapp",
+    "events": ["message.received"],
+    "secret": "'"$OPENWA_WEBHOOK_SECRET"'"
+  }'
+```
+
+Dans MailMind : Paramètres → Notifications → WhatsApp → Lier WhatsApp.
+L’utilisateur envoie `LIEN <token>` (ou ouvre le deep link `wa.me`) ; OpenWA
+poste `message.received` vers MailMind, qui vérifie `X-OpenWA-Signature`.
+
+Commandes après liaison : `/help`, `/status`, `/digest`, `/alerts`, `/unlink`.
+
+Digest : inclus dans le cron `telegram-digest` (Hobby), ou appel manuel de
+`/api/public/hooks/whatsapp-digest` avec `CRON_SECRET`.
+
+Pour le canal inbound Resend (edge), définir aussi `OPENWA_*` dans les secrets
+Supabase Functions.
 
 ## 7. Synchronisation Gmail durable
 
@@ -290,7 +333,8 @@ Apres demarrage de l'application :
 10. Modifier une preference et verifier sa persistance apres rechargement.
 11. Telecharger les exports CSV et JSON.
 12. Lier Telegram puis tester `/status`, `/digest`, `/alerts` et `/unlink`.
-13. Envoyer un e-mail urgent ou phishing et vérifier l’alerte Telegram.
+13. Lier WhatsApp (OpenWA) puis tester `/status`, `/digest`, `/alerts` et `/unlink`.
+14. Envoyer un e-mail urgent ou phishing et vérifier l’alerte Telegram / WhatsApp.
 
 ## 9. Commandes de validation
 
@@ -313,4 +357,4 @@ Le build peut encore signaler un bundle client superieur a 500 Ko (chunk Rechart
 - Definir toutes les variables secretes dans la plateforme de deploiement, pas dans le depot.
 - Appliquer la migration avant la mise en production.
 - Tester le webhook Resend et le cron en production avec l'URL publique finale.
-- Vérifier les secrets Telegram et les deux crons (`sync-emails`, `telegram-digest`).
+- Vérifier les secrets Telegram / OpenWA et les crons (`sync-emails`, `telegram-digest` qui couvre aussi WhatsApp).

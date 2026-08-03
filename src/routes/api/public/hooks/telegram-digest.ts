@@ -144,7 +144,17 @@ export const Route = createFileRoute("/api/public/hooks/telegram-digest")({
           sent += 1;
         }
 
-        return Response.json({ ok: true, sent });
+        // Hobby : un seul cron 08:00 UTC couvre aussi WhatsApp (OpenWA).
+        let whatsappSent = 0;
+        try {
+          const { runWhatsAppDigests } = await import("@/lib/whatsapp-digest.server");
+          const wa = await runWhatsAppDigests(supabaseAdmin);
+          whatsappSent = wa.sent;
+        } catch (error) {
+          console.error("whatsapp digest (via telegram-digest cron) failed", error);
+        }
+
+        return Response.json({ ok: true, sent, whatsappSent });
       },
     },
   },

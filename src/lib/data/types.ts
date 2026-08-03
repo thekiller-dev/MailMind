@@ -45,6 +45,7 @@ export interface UserSettings {
   quietStart: string;
   quietEnd: string;
   telegramDigestTime: string;
+  whatsappDigestTime: string;
   timezone: string;
 }
 

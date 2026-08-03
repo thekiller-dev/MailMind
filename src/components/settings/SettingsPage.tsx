@@ -10,6 +10,7 @@ import {
   Send,
   RefreshCw,
   Trash2,
+  MessageCircle,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { FirstEmailGuideModal } from "@/components/FirstEmailGuideModal";
@@ -29,6 +30,12 @@ import {
   unlinkTelegram,
   updateTelegramPreferences,
 } from "@/lib/telegram.functions";
+import {
+  createWhatsAppLink,
+  getWhatsAppConnection,
+  unlinkWhatsApp,
+  updateWhatsAppPreferences,
+} from "@/lib/whatsapp.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 
@@ -501,6 +508,7 @@ function NotificationsTab() {
   return (
     <>
       <TelegramCard settings={settings} updateSettings={updateSettings} />
+      <WhatsAppCard settings={settings} updateSettings={updateSettings} />
       <Card title="Canaux">
         <Toggle
           label="Notifications push — bientôt disponible"
@@ -722,6 +730,211 @@ function TelegramCard({
           </div>
           <p className="mt-4 text-xs text-muted-foreground">
             Commandes : /help, /status, /digest, /alerts et /unlink.
+          </p>
+        </>
+      )}
+    </Card>
+  );
+}
+
+function WhatsAppCard({
+  settings,
+  updateSettings,
+}: {
+  settings: UserSettings;
+  updateSettings: (patch: Partial<UserSettings>) => Promise<void>;
+}) {
+  const getConnection = useServerFn(getWhatsAppConnection);
+  const createLink = useServerFn(createWhatsAppLink);
+  const updatePreferences = useServerFn(updateWhatsAppPreferences);
+  const unlink = useServerFn(unlinkWhatsApp);
+  const [connection, setConnection] = useState<Awaited<ReturnType<typeof getConnection>> | null>(
+    null,
+  );
+  const [linkInfo, setLinkInfo] = useState<{
+    deepLink: string | null;
+    prefill: string;
+    waNumber: string | null;
+  } | null>(null);
+  const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    void getConnection()
+      .then(setConnection)
+      .catch(() => setConnection(null));
+  }, [getConnection]);
+
+  async function generateLink() {
+    setPending(true);
+    try {
+      const result = await createLink();
+      setLinkInfo({
+        deepLink: result.deepLink,
+        prefill: result.prefill,
+        waNumber: result.waNumber,
+      });
+      toast.success("Code WhatsApp généré pour 15 minutes.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "WhatsApp n'est pas disponible");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function changePreference(
+    field: "urgentAlerts" | "phishingAlerts" | "summaryDigest" | "commandAccess",
+    value: boolean,
+  ) {
+    try {
+      const next = await updatePreferences({ data: { [field]: value } });
+      setConnection(next);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Mise à jour impossible");
+    }
+  }
+
+  async function removeWhatsApp() {
+    if (!confirm("Retirer définitivement ce chat WhatsApp de MailMind ?")) return;
+    setPending(true);
+    try {
+      await unlink();
+      setConnection(null);
+      setLinkInfo(null);
+      toast.success("WhatsApp a été déconnecté.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Déconnexion impossible");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  const isLinked = connection?.status === "linked";
+  return (
+    <Card
+      title="WhatsApp"
+      desc="Recevez les alertes urgentes, les alertes phishing et vos résumés via OpenWA. Les commandes restent limitées à votre compte."
+    >
+      {!isLinked ? (
+        <>
+          <p className="text-sm text-muted-foreground">
+            Générez un code, ouvrez WhatsApp et envoyez le message prérempli au numéro MailMind. Le
+            code expire après 15 minutes.
+          </p>
+          <button
+            type="button"
+            onClick={() => void generateLink()}
+            disabled={pending}
+            aria-busy={pending}
+            className="mt-4 inline-flex items-center gap-2 rounded-md bg-foreground px-4 py-2 text-sm font-semibold text-background disabled:opacity-50"
+          >
+            <MessageCircle className="size-4" />
+            {pending ? "Génération…" : "Lier WhatsApp"}
+          </button>
+          {linkInfo && (
+            <div className="mt-4 rounded-lg border border-border bg-background p-3">
+              {linkInfo.deepLink ? (
+                <a
+                  href={linkInfo.deepLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="break-all text-xs font-semibold text-primary hover:underline"
+                >
+                  Ouvrir WhatsApp avec le message de liaison
+                </a>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Envoyez ce message au numéro WhatsApp MailMind configuré côté OpenWA :
+                </p>
+              )}
+              <p className="mt-2 break-all font-mono text-xs text-foreground">{linkInfo.prefill}</p>
+              <button
+                type="button"
+                onClick={() => void navigator.clipboard.writeText(linkInfo.prefill)}
+                className="mt-2 block text-xs text-muted-foreground hover:text-foreground"
+              >
+                Copier le message
+              </button>
+              {linkInfo.waNumber && (
+                <p className="mt-2 text-xs text-muted-foreground">Numéro : +{linkInfo.waNumber}</p>
+              )}
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-semibold">
+              Connecté
+              {connection.phone
+                ? ` au +${connection.phone}`
+                : connection.display_name
+                  ? ` (${connection.display_name})`
+                  : ""}
+            </p>
+            <button
+              type="button"
+              onClick={() => void removeWhatsApp()}
+              disabled={pending}
+              aria-busy={pending}
+              className="text-xs font-semibold text-danger hover:underline disabled:opacity-50"
+            >
+              Déconnecter
+            </button>
+          </div>
+          <div className="mt-4 space-y-1">
+            <Toggle
+              label="Alertes urgentes"
+              on={connection.urgent_alerts}
+              onChange={(value) => void changePreference("urgentAlerts", value)}
+            />
+            <Toggle
+              label="Alertes phishing et sécurité"
+              on={connection.phishing_alerts}
+              onChange={(value) => void changePreference("phishingAlerts", value)}
+            />
+            <Toggle
+              label="Digest quotidien des résumés"
+              on={connection.summary_digest}
+              onChange={(value) => void changePreference("summaryDigest", value)}
+            />
+            <Toggle
+              label="Autoriser les commandes WhatsApp"
+              on={connection.command_access}
+              onChange={(value) => void changePreference("commandAccess", value)}
+            />
+          </div>
+          <div className="mt-5 border-t border-border pt-5">
+            <p className="text-sm font-semibold">Digest WhatsApp</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Choisissez l’heure locale d’envoi de votre récapitulatif.
+            </p>
+            <div className="mt-3 flex flex-col gap-3 sm:flex-row">
+              <label className="flex flex-1 flex-col gap-1 text-xs text-muted-foreground">
+                Heure
+                <input
+                  type="time"
+                  value={settings.whatsappDigestTime}
+                  onChange={(event) =>
+                    void updateSettings({ whatsappDigestTime: event.target.value })
+                  }
+                  className="h-10 rounded-md border border-border bg-background px-3 text-sm text-foreground"
+                />
+              </label>
+              <label className="flex flex-[2] flex-col gap-1 text-xs text-muted-foreground">
+                Fuseau horaire
+                <input
+                  type="text"
+                  value={settings.timezone}
+                  onChange={(event) => void updateSettings({ timezone: event.target.value })}
+                  placeholder="Europe/Paris"
+                  className="h-10 rounded-md border border-border bg-background px-3 text-sm text-foreground"
+                />
+              </label>
+            </div>
+          </div>
+          <p className="mt-4 text-xs text-muted-foreground">
+            Commandes : /help, /status, /digest, /alerts et /unlink — ou le message « LIEN … » pour
+            lier.
           </p>
         </>
       )}

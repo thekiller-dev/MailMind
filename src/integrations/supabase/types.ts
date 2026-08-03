@@ -221,6 +221,63 @@ export type Database = {
         };
         Relationships: [];
       };
+      whatsapp_connections: {
+        Row: {
+          chat_id: string | null;
+          command_access: boolean;
+          created_at: string;
+          display_name: string | null;
+          id: string;
+          link_token_expires_at: string | null;
+          link_token_hash: string | null;
+          linked_at: string | null;
+          last_seen_at: string | null;
+          phone: string | null;
+          phishing_alerts: boolean;
+          status: string;
+          summary_digest: boolean;
+          updated_at: string;
+          urgent_alerts: boolean;
+          user_id: string;
+        };
+        Insert: {
+          chat_id?: string | null;
+          command_access?: boolean;
+          created_at?: string;
+          display_name?: string | null;
+          id?: string;
+          link_token_expires_at?: string | null;
+          link_token_hash?: string | null;
+          linked_at?: string | null;
+          last_seen_at?: string | null;
+          phone?: string | null;
+          phishing_alerts?: boolean;
+          status?: string;
+          summary_digest?: boolean;
+          updated_at?: string;
+          urgent_alerts?: boolean;
+          user_id: string;
+        };
+        Update: {
+          chat_id?: string | null;
+          command_access?: boolean;
+          created_at?: string;
+          display_name?: string | null;
+          id?: string;
+          link_token_expires_at?: string | null;
+          link_token_hash?: string | null;
+          linked_at?: string | null;
+          last_seen_at?: string | null;
+          phone?: string | null;
+          phishing_alerts?: boolean;
+          status?: string;
+          summary_digest?: boolean;
+          updated_at?: string;
+          urgent_alerts?: boolean;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       telegram_delivery_events: {
         Row: {
           chat_id: number;
@@ -236,6 +293,27 @@ export type Database = {
         };
         Update: {
           chat_id?: number;
+          created_at?: string;
+          event_id?: string;
+          event_type?: string;
+        };
+        Relationships: [];
+      };
+      whatsapp_delivery_events: {
+        Row: {
+          chat_id: string;
+          created_at: string;
+          event_id: string;
+          event_type: string;
+        };
+        Insert: {
+          chat_id: string;
+          created_at?: string;
+          event_id: string;
+          event_type: string;
+        };
+        Update: {
+          chat_id?: string;
           created_at?: string;
           event_id?: string;
           event_type?: string;
@@ -416,6 +494,7 @@ export type Database = {
         Row: {
           settings: Json;
           telegram_digest_time: string;
+          whatsapp_digest_time: string;
           timezone: string;
           updated_at: string;
           user_id: string;
@@ -423,6 +502,7 @@ export type Database = {
         Insert: {
           settings?: Json;
           telegram_digest_time?: string;
+          whatsapp_digest_time?: string;
           timezone?: string;
           updated_at?: string;
           user_id: string;
@@ -430,6 +510,7 @@ export type Database = {
         Update: {
           settings?: Json;
           telegram_digest_time?: string;
+          whatsapp_digest_time?: string;
           timezone?: string;
           updated_at?: string;
           user_id?: string;

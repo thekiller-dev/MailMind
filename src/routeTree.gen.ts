@@ -27,6 +27,8 @@ import { Route as ApiGmailCallbackRouteImport } from './routes/api/gmail/callbac
 import { Route as ApiPublicHooksRiscRouteImport } from './routes/api/public/hooks/risc'
 import { Route as ApiPublicHooksSyncEmailsRouteImport } from './routes/api/public/hooks/sync-emails'
 import { Route as ApiPublicHooksTelegramDigestRouteImport } from './routes/api/public/hooks/telegram-digest'
+import { Route as ApiPublicHooksWhatsappRouteImport } from './routes/api/public/hooks/whatsapp'
+import { Route as ApiPublicHooksWhatsappDigestRouteImport } from './routes/api/public/hooks/whatsapp-digest'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -120,6 +122,17 @@ const ApiPublicHooksTelegramDigestRoute =
     path: '/api/public/hooks/telegram-digest',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksWhatsappRoute = ApiPublicHooksWhatsappRouteImport.update({
+  id: '/api/public/hooks/whatsapp',
+  path: '/api/public/hooks/whatsapp',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicHooksWhatsappDigestRoute =
+  ApiPublicHooksWhatsappDigestRouteImport.update({
+    id: '/api/public/hooks/whatsapp-digest',
+    path: '/api/public/hooks/whatsapp-digest',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -140,6 +153,8 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/risc': typeof ApiPublicHooksRiscRoute
   '/api/public/hooks/sync-emails': typeof ApiPublicHooksSyncEmailsRoute
   '/api/public/hooks/telegram-digest': typeof ApiPublicHooksTelegramDigestRoute
+  '/api/public/hooks/whatsapp': typeof ApiPublicHooksWhatsappRoute
+  '/api/public/hooks/whatsapp-digest': typeof ApiPublicHooksWhatsappDigestRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -160,6 +175,8 @@ export interface FileRoutesByTo {
   '/api/public/hooks/risc': typeof ApiPublicHooksRiscRoute
   '/api/public/hooks/sync-emails': typeof ApiPublicHooksSyncEmailsRoute
   '/api/public/hooks/telegram-digest': typeof ApiPublicHooksTelegramDigestRoute
+  '/api/public/hooks/whatsapp': typeof ApiPublicHooksWhatsappRoute
+  '/api/public/hooks/whatsapp-digest': typeof ApiPublicHooksWhatsappDigestRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -181,6 +198,8 @@ export interface FileRoutesById {
   '/api/public/hooks/risc': typeof ApiPublicHooksRiscRoute
   '/api/public/hooks/sync-emails': typeof ApiPublicHooksSyncEmailsRoute
   '/api/public/hooks/telegram-digest': typeof ApiPublicHooksTelegramDigestRoute
+  '/api/public/hooks/whatsapp': typeof ApiPublicHooksWhatsappRoute
+  '/api/public/hooks/whatsapp-digest': typeof ApiPublicHooksWhatsappDigestRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -203,6 +222,8 @@ export interface FileRouteTypes {
     | '/api/public/hooks/risc'
     | '/api/public/hooks/sync-emails'
     | '/api/public/hooks/telegram-digest'
+    | '/api/public/hooks/whatsapp'
+    | '/api/public/hooks/whatsapp-digest'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -223,6 +244,8 @@ export interface FileRouteTypes {
     | '/api/public/hooks/risc'
     | '/api/public/hooks/sync-emails'
     | '/api/public/hooks/telegram-digest'
+    | '/api/public/hooks/whatsapp'
+    | '/api/public/hooks/whatsapp-digest'
   id:
     | '__root__'
     | '/'
@@ -243,6 +266,8 @@ export interface FileRouteTypes {
     | '/api/public/hooks/risc'
     | '/api/public/hooks/sync-emails'
     | '/api/public/hooks/telegram-digest'
+    | '/api/public/hooks/whatsapp'
+    | '/api/public/hooks/whatsapp-digest'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -264,6 +289,8 @@ export interface RootRouteChildren {
   ApiPublicHooksRiscRoute: typeof ApiPublicHooksRiscRoute
   ApiPublicHooksSyncEmailsRoute: typeof ApiPublicHooksSyncEmailsRoute
   ApiPublicHooksTelegramDigestRoute: typeof ApiPublicHooksTelegramDigestRoute
+  ApiPublicHooksWhatsappRoute: typeof ApiPublicHooksWhatsappRoute
+  ApiPublicHooksWhatsappDigestRoute: typeof ApiPublicHooksWhatsappDigestRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -394,6 +421,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksTelegramDigestRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/whatsapp': {
+      id: '/api/public/hooks/whatsapp'
+      path: '/api/public/hooks/whatsapp'
+      fullPath: '/api/public/hooks/whatsapp'
+      preLoaderRoute: typeof ApiPublicHooksWhatsappRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/whatsapp-digest': {
+      id: '/api/public/hooks/whatsapp-digest'
+      path: '/api/public/hooks/whatsapp-digest'
+      fullPath: '/api/public/hooks/whatsapp-digest'
+      preLoaderRoute: typeof ApiPublicHooksWhatsappDigestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -416,6 +457,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksRiscRoute: ApiPublicHooksRiscRoute,
   ApiPublicHooksSyncEmailsRoute: ApiPublicHooksSyncEmailsRoute,
   ApiPublicHooksTelegramDigestRoute: ApiPublicHooksTelegramDigestRoute,
+  ApiPublicHooksWhatsappRoute: ApiPublicHooksWhatsappRoute,
+  ApiPublicHooksWhatsappDigestRoute: ApiPublicHooksWhatsappDigestRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

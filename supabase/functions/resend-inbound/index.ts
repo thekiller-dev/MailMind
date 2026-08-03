@@ -1,6 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { Webhook } from "npm:svix";
 import { notifyEmailAnalysis } from "../_shared/telegram.ts";
+import { notifyWhatsAppEmailAnalysis } from "../_shared/whatsapp.ts";
 
 type ResendEvent = {
   type: string;
@@ -273,6 +274,19 @@ Deno.serve(async (request) => {
             });
           } catch (notificationError) {
             console.error("telegram notification failed", notificationError);
+          }
+          try {
+            await notifyWhatsAppEmailAnalysis(supabase, account.user_id, {
+              id: emailId,
+              sender: email.from,
+              subject: email.subject,
+              summary: analysis.summary,
+              category: analysis.category,
+              risk_score: analysis.risk_score,
+              risk_reason: analysis.risk_reason,
+            });
+          } catch (notificationError) {
+            console.error("whatsapp notification failed", notificationError);
           }
         }
       } catch (error) {

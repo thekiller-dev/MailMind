@@ -56,6 +56,10 @@ Préférences JSONB versionnées par utilisateur : sensibilité, listes blanche/
 - `sync_runs` instrumente chaque synchronisation et son résultat.
 - `email_actions` journalise les actions Gmail avec une clé d'idempotence.
 - `usage_events` porte les quotas IA et les métriques d'usage.
+- `telegram_connections` / `whatsapp_connections` lient un chat messagerie à un utilisateur (token de liaison hashé, préférences d’alertes/digest).
+- `telegram_delivery_events` / `whatsapp_delivery_events` assurent l’idempotence des envois et commandes.
+
+WhatsApp passe par un serveur **OpenWA distant** (REST + webhook HMAC) : MailMind n’embarque pas de session Chrome WhatsApp.
 
 ## Flux métier principal
 
@@ -68,8 +72,9 @@ Préférences JSONB versionnées par utilisateur : sensibilité, listes blanche/
 7. Les listes blanche/noire sont appliquées avant l'appel IA.
 8. Les autres messages sont minimisés et expurgés de secrets avant l'appel au modèle, sous contrôle de quotas.
 9. Le résultat structuré est validé par Zod et enregistré dans PostgreSQL.
-10. L'interface reçoit les changements via Supabase Realtime.
-11. Les actions d'archivage, de signalement et de réponse sont vérifiées côté serveur avant l'appel Gmail.
+10. Les alertes urgentes / phishing sont poussées vers Telegram et/ou WhatsApp (OpenWA) selon les préférences et hors quiet hours.
+11. L'interface reçoit les changements via Supabase Realtime.
+12. Les actions d'archivage, de signalement et de réponse sont vérifiées côté serveur avant l'appel Gmail.
 
 ## Environnements et configuration
 

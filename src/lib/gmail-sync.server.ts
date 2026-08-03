@@ -12,7 +12,27 @@ import { analyzeEmailContent } from "./email-analysis.server";
 import { decryptSecret, encryptSecret, isEncryptedSecret } from "./secret-crypto.server";
 import { buildPreferenceAnalysis, getPreferenceList, matchesSenderList } from "./business-rules";
 import { notifyEmailAnalysis } from "./telegram-notify.server";
+import { notifyWhatsAppEmailAnalysis } from "./whatsapp-notify.server";
 import { isWithinQuietHours } from "./analysis-settings";
+
+async function notifyChannels(
+  supabase: Parameters<typeof notifyEmailAnalysis>[0],
+  userId: string,
+  email: Parameters<typeof notifyEmailAnalysis>[2],
+) {
+  const errors: string[] = [];
+  try {
+    await notifyEmailAnalysis(supabase, userId, email);
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : String(error));
+  }
+  try {
+    await notifyWhatsAppEmailAnalysis(supabase, userId, email);
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : String(error));
+  }
+  if (errors.length) throw new Error(errors.join(" | "));
+}
 
 interface AccountRow {
   id: string;
@@ -191,7 +211,7 @@ export async function syncGmailAccount(
         analyzed++;
         try {
           if (notificationsPaused) continue;
-          await notifyEmailAnalysis(supabase, account.user_id, {
+          await notifyChannels(supabase, account.user_id, {
             id: emailRowId,
             sender: msgSender,
             subject: msgSubject,
@@ -238,7 +258,7 @@ export async function syncGmailAccount(
           analyzed++;
           try {
             if (notificationsPaused) continue;
-            await notifyEmailAnalysis(supabase, account.user_id, {
+            await notifyChannels(supabase, account.user_id, {
               id: emailRowId,
               sender: msgSender,
               subject: msgSubject,
