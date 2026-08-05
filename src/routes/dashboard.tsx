@@ -11,7 +11,9 @@ import {
 import { AppShell, EmptyState } from "@/components/AppShell";
 import { ProviderIcon } from "@/components/ProviderIcons";
 import { useAccounts, useEmails } from "@/lib/data-hooks";
-import { lazy, Suspense } from "react";
+import { getDashboardStats, type DashboardStats } from "@/lib/dashboard-stats.functions";
+import { useServerFn } from "@tanstack/react-start";
+import { lazy, Suspense, useEffect, useState } from "react";
 
 const DashboardFlowChart = lazy(() =>
   import("@/components/dashboard/DashboardCharts").then((module) => ({
@@ -26,6 +28,11 @@ const DashboardDistributionChart = lazy(() =>
 const TelegramMetricsChart = lazy(() =>
   import("@/components/TelegramMetricsChart").then((module) => ({
     default: module.TelegramMetricsChart,
+  })),
+);
+const WhatsAppMetricsChart = lazy(() =>
+  import("@/components/WhatsAppMetricsChart").then((module) => ({
+    default: module.WhatsAppMetricsChart,
   })),
 );
 
@@ -45,13 +52,22 @@ export const Route = createFileRoute("/dashboard")({
 function Dashboard() {
   const { emails, loading } = useEmails();
   const { accounts } = useAccounts();
+  const loadStats = useServerFn(getDashboardStats);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
 
-  const analyzed = emails.filter((e) => e.analyzed_at || e.summary).length;
-  const urgent = emails.filter((e) => e.category === "Urgent").length;
-  const threats = emails.filter(
-    (e) => (e.risk_score ?? 0) >= 0.7 || e.category === "Phishing",
-  ).length;
-  const savedMin = Math.round(emails.length * 1.2);
+  useEffect(() => {
+    void loadStats()
+      .then(setStats)
+      .catch(() => setStats(null));
+  }, [loadStats, emails.length]);
+
+  const analyzed = stats?.analyzedTotal ?? emails.filter((e) => e.analyzed_at || e.summary).length;
+  const urgent = stats?.urgentTotal ?? emails.filter((e) => e.category === "Urgent").length;
+  const threats =
+    stats?.threatsTotal ??
+    emails.filter((e) => (e.risk_score ?? 0) >= 0.7 || e.category === "Phishing").length;
+  const inboxTotal = stats?.inboxTotal ?? emails.length;
+  const savedMin = Math.round(analyzed * 1.2);
 
   const distribution = [
     "Phishing",
@@ -113,7 +129,7 @@ function Dashboard() {
           <StatCard
             label="E-mails analysés"
             value={analyzed.toLocaleString("fr-FR")}
-            hint={`${emails.length} au total`}
+            hint={`${inboxTotal.toLocaleString("fr-FR")} en inbox`}
             icon={Sparkles}
           />
           <StatCard label="Urgents" value={String(urgent)} hint="à traiter" icon={Zap} />
@@ -151,10 +167,18 @@ function Dashboard() {
               </Suspense>
             </div>
           </div>
-          <div className="rounded-3xl glass p-6 sm:p-8 lg:col-span-2">
-            <Suspense fallback={<ChartFallback />}>
-              <TelegramMetricsChart compact />
-            </Suspense>
+
+          <div className="grid gap-4 sm:gap-6 lg:col-span-2 lg:grid-cols-2">
+            <div className="rounded-3xl glass p-6 sm:p-8">
+              <Suspense fallback={<ChartFallback />}>
+                <TelegramMetricsChart compact />
+              </Suspense>
+            </div>
+            <div className="rounded-3xl glass p-6 sm:p-8">
+              <Suspense fallback={<ChartFallback />}>
+                <WhatsAppMetricsChart compact />
+              </Suspense>
+            </div>
           </div>
 
           <div className="rounded-3xl glass p-6 sm:p-8">

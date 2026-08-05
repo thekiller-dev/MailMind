@@ -12,6 +12,8 @@ type OpenWaMessageData = {
   from?: string;
   to?: string;
   chatId?: string;
+  /** Présent sur certains payloads moteur (historique / groupes). */
+  author?: string;
   body?: string | null;
   text?: string | null;
   caption?: string | null;
@@ -60,12 +62,17 @@ export function normalizeOpenWaIncomingMessage(payload: OpenWaWebhookBody): {
     (typeof data?.text === "string" && data.text) ||
     (typeof data?.caption === "string" && data.caption) ||
     "";
+  // OpenWA : `from` documenté ; `chatId` / `author` utiles pour @lid / variantes moteur.
   const chatId =
     (typeof data?.from === "string" && data.from.trim()) ||
     (typeof data?.chatId === "string" && data.chatId.trim()) ||
+    (typeof data?.author === "string" && data.author.trim()) ||
     "";
   const isGroup =
-    Boolean(data?.isGroup) || data?.kind === "group" || chatId.endsWith("@g.us");
+    Boolean(data?.isGroup) ||
+    data?.kind === "group" ||
+    chatId.endsWith("@g.us") ||
+    data?.kind === "broadcast";
   return {
     body: sanitizeWhatsAppText(rawBody),
     chatId,
@@ -170,12 +177,16 @@ export async function handleOpenWaMessageReceived(
     });
   }
 
+  const nested = payload.payload ?? null;
+  const rawData = payload.data ?? payload.message ?? nested?.data ?? nested?.message ?? null;
   const normalized = normalizeOpenWaIncomingMessage(payload);
   const { body, chatId, fromMe, isGroup, displayName } = normalized;
   if (!body || !chatId) {
     console.warn("whatsapp webhook ignored: missing body/from", {
-      hasData: Boolean(payload.data ?? payload.message),
-      keys: Object.keys((payload.data ?? payload.message ?? {}) as object),
+      hasData: Boolean(rawData),
+      keys: Object.keys((rawData ?? {}) as object),
+      type: typeof rawData?.type === "string" ? rawData.type : null,
+      kind: typeof rawData?.kind === "string" ? rawData.kind : null,
     });
     return { ok: true, ignored: true };
   }
@@ -192,6 +203,12 @@ export async function handleOpenWaMessageReceived(
     });
     return { ok: true, ignored: true };
   }
+
+  console.info("whatsapp webhook message.received", {
+    chatIdSuffix: chatId.slice(-16),
+    bodyPreview: body.slice(0, 32),
+    looksLikeLink: /^(?:\/(?:start|lien)|lien|start)\s+\S+/i.test(body),
+  });
 
   const { error: eventClaimError } = await supabase.from("whatsapp_delivery_events").insert({
     event_id: idempotencyKey,
@@ -226,6 +243,10 @@ export async function handleOpenWaMessageReceived(
       .maybeSingle();
     if (pendingError) throw pendingError;
     if (!pending) {
+      console.warn("whatsapp link token invalid or expired", {
+        chatIdSuffix: chatId.slice(-16),
+        tokenLen: linkToken.length,
+      });
       await sendOpenWaText(
         chatId,
         "Lien invalide ou expiré. Génère un nouveau lien depuis MailMind → Paramètres.",
@@ -235,10 +256,10 @@ export async function handleOpenWaMessageReceived(
 
     const phone =
       phoneFromChatId(chatId) ??
-      (typeof payload.data?.senderPhone === "string"
-        ? payload.data.senderPhone.replace(/\D/g, "") || null
+      (typeof rawData?.senderPhone === "string"
+        ? rawData.senderPhone.replace(/\D/g, "") || null
         : null);
-    const { error: linkError } = await supabase
+    const { data: linkedRow, error: linkError } = await supabase
       .from("whatsapp_connections")
       .update({
         chat_id: chatId,
@@ -252,8 +273,26 @@ export async function handleOpenWaMessageReceived(
         updated_at: new Date().toISOString(),
       })
       .eq("user_id", pending.user_id)
-      .eq("status", "pending");
+      .eq("status", "pending")
+      .select("user_id")
+      .maybeSingle();
     if (linkError) throw linkError;
+    if (!linkedRow) {
+      // Concurrent link / status déjà changé : pas de faux « succès » silencieux.
+      console.warn("whatsapp link update matched 0 rows", {
+        userPrefix: pending.user_id.slice(0, 8),
+        chatIdSuffix: chatId.slice(-16),
+      });
+      await sendOpenWaText(
+        chatId,
+        "Liaison impossible (état déjà modifié). Régénère un lien depuis MailMind → Paramètres.",
+      );
+      return { ok: true };
+    }
+    console.info("whatsapp link success", {
+      userPrefix: pending.user_id.slice(0, 8),
+      chatIdSuffix: chatId.slice(-16),
+    });
     await sendOpenWaText(
       chatId,
       "WhatsApp est maintenant lié à ton compte MailMind. Envoie /help pour voir les commandes.",

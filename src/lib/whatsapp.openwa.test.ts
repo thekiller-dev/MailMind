@@ -130,6 +130,20 @@ describe("normalizeOpenWaIncomingMessage", () => {
       fromMe: false,
     });
   });
+  it("accepte author comme fallback chatId", () => {
+    expect(
+      normalizeOpenWaIncomingMessage({
+        data: {
+          author: "33655555555@lid",
+          body: "LIEN tok",
+          senderPhone: "33655555555",
+        },
+      }),
+    ).toMatchObject({
+      body: "LIEN tok",
+      chatId: "33655555555@lid",
+    });
+  });
 });
 
 describe("whatsapp digest schedule", () => {

@@ -64,6 +64,9 @@ export const createForwardingInbox = createServerFn({ method: "POST" })
     if (existingError) throw existingError;
     if (existing) return publicInbox(existing);
 
+    const { assertCanAddEmailAccount } = await import("./plan.server");
+    await assertCanAddEmailAccount(supabaseAdmin, context.userId);
+
     const alias = createAlias();
     const { data: created, error } = await supabaseAdmin
       .from("email_accounts")

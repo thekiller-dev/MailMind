@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Archive,
+  ArrowLeft,
   Copy,
   Flag,
   Inbox as InboxIcon,
@@ -146,14 +147,25 @@ function EmailDetail({ email, onClose }: { email: DbEmail; onClose: () => void }
   const send = useServerFn(sendEmailReply);
   const [reply, setReply] = useState("");
   const [pending, setPending] = useState<"archive" | "report" | "generate" | "send" | null>(null);
+  const [mobileTab, setMobileTab] = useState<"message" | "mind">("message");
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const dialogPanelRef = useRef<HTMLDivElement>(null);
+  const highRisk = risk >= 0.7;
+
+  useEffect(() => {
+    setMobileTab("message");
+  }, [email.id]);
 
   useEffect(() => {
     const returnFocusTo =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
 
-    closeButtonRef.current?.focus();
+    const closeButtons =
+      dialogPanelRef.current?.querySelectorAll<HTMLButtonElement>("[data-email-close]") ?? [];
+    const visibleClose = Array.from(closeButtons).find((btn) => btn.offsetParent !== null);
+    (visibleClose ?? closeButtonRef.current)?.focus();
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
@@ -181,6 +193,7 @@ function EmailDetail({ email, onClose }: { email: DbEmail; onClose: () => void }
     document.addEventListener("keydown", handleKeyDown);
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousOverflow;
       returnFocusTo?.focus();
     };
   }, [onClose]);
@@ -247,7 +260,7 @@ function EmailDetail({ email, onClose }: { email: DbEmail; onClose: () => void }
 
   return (
     <div
-      className="fixed inset-0 z-50 flex justify-end bg-background/60 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex justify-end overflow-hidden bg-background/60 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-labelledby="email-detail-title"
@@ -255,9 +268,62 @@ function EmailDetail({ email, onClose }: { email: DbEmail; onClose: () => void }
       <div aria-hidden="true" onClick={onClose} className="absolute inset-0 cursor-default" />
       <div
         ref={dialogPanelRef}
-        className="relative flex h-full w-full max-w-6xl min-w-0 flex-col bg-background shadow-2xl xl:flex-row"
+        className="relative flex h-full w-full max-w-6xl min-w-0 flex-col overflow-hidden bg-background shadow-2xl xl:flex-row"
       >
-        <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
+        <div className="flex items-center gap-2 border-b border-border px-4 py-3 sm:px-6 xl:hidden">
+          <button
+            type="button"
+            onClick={onClose}
+            data-email-close
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="size-3.5" />
+            Retour
+          </button>
+          <div
+            className="ml-auto flex rounded-lg border border-border p-0.5"
+            role="tablist"
+            aria-label="Vue e-mail"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mobileTab === "message"}
+              onClick={() => setMobileTab("message")}
+              className={`rounded-md px-3 py-1.5 text-[11px] font-semibold ${
+                mobileTab === "message"
+                  ? "bg-foreground text-background"
+                  : "text-muted-foreground"
+              }`}
+            >
+              Message
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mobileTab === "mind"}
+              onClick={() => setMobileTab("mind")}
+              className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[11px] font-semibold ${
+                mobileTab === "mind" ? "bg-foreground text-background" : "text-muted-foreground"
+              }`}
+            >
+              MindPanel
+              {highRisk && (
+                <span
+                  className="size-1.5 rounded-full bg-danger"
+                  title="Risque élevé"
+                  aria-label="Risque élevé"
+                />
+              )}
+            </button>
+          </div>
+        </div>
+
+        <div
+          className={`min-w-0 flex-1 flex-col overflow-y-auto ${
+            mobileTab === "message" ? "flex" : "hidden xl:flex"
+          }`}
+        >
           <div className="border-b border-border px-6 py-5 sm:px-8 sm:py-6">
             <div className="flex items-start justify-between gap-4">
               <h2
@@ -270,7 +336,8 @@ function EmailDetail({ email, onClose }: { email: DbEmail; onClose: () => void }
                 ref={closeButtonRef}
                 type="button"
                 onClick={onClose}
-                className="rounded-lg border border-border px-3 py-1 text-xs text-muted-foreground hover:text-foreground"
+                data-email-close
+                className="hidden rounded-lg border border-border px-3 py-1 text-xs text-muted-foreground hover:text-foreground xl:inline-flex"
               >
                 Fermer
               </button>
@@ -314,8 +381,12 @@ function EmailDetail({ email, onClose }: { email: DbEmail; onClose: () => void }
           </div>
         </div>
 
-        <aside className="w-full shrink-0 overflow-y-auto border-t border-border bg-surface-muted/30 p-5 sm:p-6 xl:w-96 xl:border-l xl:border-t-0">
-          <div className="mb-6 flex items-center gap-2">
+        <aside
+          className={`w-full shrink-0 overflow-y-auto border-border bg-surface-muted/30 p-5 sm:p-6 xl:w-96 xl:border-l ${
+            mobileTab === "mind" ? "flex flex-col border-t-0" : "hidden xl:block"
+          }`}
+        >
+          <div className="mb-6 hidden items-center gap-2 xl:flex">
             <div className="size-2 rounded-full bg-foreground" />
             <span className="font-display text-xs font-bold uppercase tracking-widest">
               MindPanel

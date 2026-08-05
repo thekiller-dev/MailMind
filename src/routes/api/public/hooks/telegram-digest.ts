@@ -103,7 +103,10 @@ export const Route = createFileRoute("/api/public/hooks/telegram-digest")({
         );
         const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
         let sent = 0;
+        const { getUserPlan } = await import("@/lib/plan.server");
         for (const connection of connections ?? []) {
+          const plan = await getUserPlan(supabaseAdmin, connection.user_id);
+          if (plan !== "pro") continue;
           const settings = settingsByUser.get(connection.user_id) ?? {
             time: "08:00",
             timezone: "UTC",

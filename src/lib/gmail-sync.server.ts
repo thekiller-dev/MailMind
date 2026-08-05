@@ -14,6 +14,7 @@ import { buildPreferenceAnalysis, getPreferenceList, matchesSenderList } from ".
 import { notifyEmailAnalysis } from "./telegram-notify.server";
 import { notifyWhatsAppEmailAnalysis } from "./whatsapp-notify.server";
 import { isWithinQuietHours } from "./analysis-settings";
+import { incrementEmailsAnalyzedCount } from "./plan.server";
 
 async function notifyChannels(
   supabase: Parameters<typeof notifyEmailAnalysis>[0],
@@ -195,6 +196,11 @@ export async function syncGmailAccount(
           .update({ ...preferenceAnalysis, analyzed_at: new Date().toISOString() })
           .eq("id", emailRowId);
         analyzed++;
+        try {
+          await incrementEmailsAnalyzedCount(supabase, account.user_id);
+        } catch (e) {
+          errors.push(e instanceof Error ? e.message : String(e));
+        }
         continue;
       }
 
@@ -210,6 +216,11 @@ export async function syncGmailAccount(
           .eq("id", emailRowId);
         analyzed++;
         try {
+          await incrementEmailsAnalyzedCount(supabase, account.user_id);
+        } catch (e) {
+          errors.push(e instanceof Error ? e.message : String(e));
+        }
+        try {
           if (notificationsPaused) continue;
           await notifyChannels(supabase, account.user_id, {
             id: emailRowId,
@@ -217,6 +228,7 @@ export async function syncGmailAccount(
             subject: msgSubject,
             summary: preferenceAnalysis.summary,
             category: preferenceAnalysis.category,
+            intent: preferenceAnalysis.intent,
             risk_score: preferenceAnalysis.risk_score,
             risk_reason: preferenceAnalysis.risk_reason,
           });
@@ -257,6 +269,11 @@ export async function syncGmailAccount(
             .eq("id", emailRowId);
           analyzed++;
           try {
+            await incrementEmailsAnalyzedCount(supabase, account.user_id);
+          } catch (e) {
+            errors.push(e instanceof Error ? e.message : String(e));
+          }
+          try {
             if (notificationsPaused) continue;
             await notifyChannels(supabase, account.user_id, {
               id: emailRowId,
@@ -264,6 +281,7 @@ export async function syncGmailAccount(
               subject: msgSubject,
               summary: a.summary,
               category: a.category,
+              intent: a.intent,
               risk_score: a.risk_score,
               risk_reason: a.risk_reason,
             });

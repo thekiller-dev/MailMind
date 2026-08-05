@@ -36,6 +36,10 @@ export const getGmailAuthUrl = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((data: unknown) => z.object({ origin: z.string().url() }).parse(data))
   .handler(async ({ context, data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { assertCanAddEmailAccount } = await import("./plan.server");
+    await assertCanAddEmailAccount(supabaseAdmin, context.userId);
+
     const origin = resolveOAuthOrigin(data.origin.replace(/\/$/, ""));
     const redirectUri = `${origin}/api/gmail/callback`;
     const { createGmailOAuthState } = await import("./oauth-state.server");

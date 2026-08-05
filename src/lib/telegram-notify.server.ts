@@ -1,4 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { deriveEmailAction, isSecurityAlert } from "./channel-notify-shared";
+import { getUserPlan } from "./plan.server";
 
 function escapeTelegramHtml(value: string): string {
   return value
@@ -26,67 +28,115 @@ async function sendTelegramMessage(chatId: number, text: string) {
   }
 }
 
-type EmailNotification = {
+export type EmailNotification = {
   id: string;
   sender: string;
   subject: string;
   summary: string | null;
   category: string | null;
+  intent?: string | null;
   risk_score: number | null;
   risk_reason: string | null;
 };
 
-/** Alertes urgentes / phishing après analyse OAuth (parité avec resend-inbound). */
+async function claimAndSend(
+  supabase: SupabaseClient,
+  chatId: number,
+  eventType: string,
+  eventId: string,
+  text: string,
+) {
+  const { error: claimError } = await supabase.from("telegram_delivery_events").insert({
+    event_id: eventId,
+    chat_id: chatId,
+    event_type: eventType,
+  });
+  if (claimError) {
+    if (claimError.code === "23505") return;
+    throw claimError;
+  }
+
+  try {
+    await sendTelegramMessage(chatId, text);
+  } catch (error) {
+    await supabase.from("telegram_delivery_events").delete().eq("event_id", eventId);
+    throw error;
+  }
+}
+
+/** Récap + alertes urgentes / phishing après analyse. */
 export async function notifyEmailAnalysis(
   supabase: SupabaseClient,
   userId: string,
   email: EmailNotification,
 ) {
+  const plan = await getUserPlan(supabase, userId);
+  if (plan !== "pro") return;
+
   const { data: connection } = await supabase
     .from("telegram_connections")
-    .select("chat_id,urgent_alerts,phishing_alerts,status")
+    .select("chat_id,urgent_alerts,phishing_alerts,summary_alerts,status")
     .eq("user_id", userId)
     .eq("status", "linked")
     .maybeSingle();
   if (!connection?.chat_id) return;
 
+  const chatId = Number(connection.chat_id);
   const isUrgent = email.category === "Urgent";
-  const isPhishing =
-    email.category === "Phishing" ||
-    email.category === "Sécurité" ||
-    (email.risk_score ?? 0) >= 0.6;
-  const shouldSend =
-    (isUrgent && connection.urgent_alerts) || (isPhishing && connection.phishing_alerts);
-  if (!shouldSend) return;
+  const security = isSecurityAlert(email);
+  const action = deriveEmailAction(email);
+  const priorityPrefix =
+    isUrgent || security
+      ? isUrgent
+        ? "⚡ Prioritaire — "
+        : "🛡 Sécurité — "
+      : "";
 
-  const eventType = isUrgent ? "urgent" : "phishing";
-  const eventId = `email:${email.id}:${eventType}`;
+  if (connection.summary_alerts !== false) {
+    const recapText = [
+      `<b>${priorityPrefix}Récap MailMind</b>`,
+      `<b>${escapeTelegramHtml(email.subject || "(sans objet)")}</b>`,
+      `Expéditeur : ${escapeTelegramHtml(email.sender || "inconnu")}`,
+      email.category ? `Catégorie : ${escapeTelegramHtml(email.category)}` : "",
+      email.summary ? escapeTelegramHtml(email.summary) : "",
+      email.risk_score != null && email.risk_score >= 0.4
+        ? `Risque : ${Math.round(email.risk_score * 100)}%${
+            email.risk_reason ? ` — ${escapeTelegramHtml(email.risk_reason)}` : ""
+          }`
+        : "",
+      `Action : ${escapeTelegramHtml(action)}`,
+    ]
+      .filter(Boolean)
+      .join("\n");
 
-  const { error: claimError } = await supabase.from("telegram_delivery_events").insert({
-    event_id: eventId,
-    chat_id: connection.chat_id,
-    event_type: eventType,
-  });
-  if (claimError) {
-    // Unique violation = déjà envoyé (re-sync)
-    if (claimError.code === "23505") return;
-    throw claimError;
+    await claimAndSend(supabase, chatId, "recap", `email:${email.id}:recap`, recapText);
   }
 
-  const text = [
-    isUrgent ? "<b>Alerte urgente</b>" : "<b>Alerte sécurité</b>",
-    `<b>${escapeTelegramHtml(email.subject || "(sans objet)")}</b>`,
-    `Expéditeur : ${escapeTelegramHtml(email.sender || "inconnu")}`,
-    email.summary ? escapeTelegramHtml(email.summary) : "",
-    email.risk_reason ? `Raison : ${escapeTelegramHtml(email.risk_reason)}` : "",
-  ]
-    .filter(Boolean)
-    .join("\n");
+  if (isUrgent && connection.urgent_alerts) {
+    const text = [
+      "<b>Alerte urgente</b>",
+      `<b>${escapeTelegramHtml(email.subject || "(sans objet)")}</b>`,
+      `Expéditeur : ${escapeTelegramHtml(email.sender || "inconnu")}`,
+      email.summary ? escapeTelegramHtml(email.summary) : "",
+      `Action : ${escapeTelegramHtml(action)}`,
+      email.risk_reason ? `Raison : ${escapeTelegramHtml(email.risk_reason)}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+    await claimAndSend(supabase, chatId, "urgent", `email:${email.id}:urgent`, text);
+  }
 
-  try {
-    await sendTelegramMessage(Number(connection.chat_id), text);
-  } catch (error) {
-    await supabase.from("telegram_delivery_events").delete().eq("event_id", eventId);
-    throw error;
+  if (security && connection.phishing_alerts) {
+    const text = [
+      "<b>Alerte sécurité</b>",
+      `<b>${escapeTelegramHtml(email.subject || "(sans objet)")}</b>`,
+      `Expéditeur : ${escapeTelegramHtml(email.sender || "inconnu")}`,
+      email.summary ? escapeTelegramHtml(email.summary) : "",
+      `Action : ${escapeTelegramHtml(action)}`,
+      email.risk_reason ? `Raison : ${escapeTelegramHtml(email.risk_reason)}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+    await claimAndSend(supabase, chatId, "phishing", `email:${email.id}:phishing`, text);
   }
 }

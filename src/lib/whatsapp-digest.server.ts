@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendOpenWaText } from "./openwa.server";
+import { getUserPlan } from "./plan.server";
 
 function getLocalDateTime(timeZone: string, date = new Date()) {
   try {
@@ -67,6 +68,8 @@ export async function runWhatsAppDigests(supabase: SupabaseClient, now = new Dat
 
   for (const connection of connections ?? []) {
     if (!connection.chat_id) continue;
+    const plan = await getUserPlan(supabase, connection.user_id);
+    if (plan !== "pro") continue;
     const settings = settingsByUser.get(connection.user_id) ?? {
       time: "08:00",
       timezone: "UTC",

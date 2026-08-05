@@ -9,7 +9,7 @@ function dayKey(value: string) {
   return value.slice(0, 10);
 }
 
-export const getTelegramMetrics = createServerFn({ method: "GET" })
+export const getWhatsAppMetrics = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((data: unknown) =>
     z.object({ days: z.number().int().min(7).max(30).default(7) }).parse(data),
@@ -17,7 +17,7 @@ export const getTelegramMetrics = createServerFn({ method: "GET" })
   .handler(async ({ context, data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: connection, error: connectionError } = await supabaseAdmin
-      .from("telegram_connections")
+      .from("whatsapp_connections")
       .select("chat_id")
       .eq("user_id", context.userId)
       .eq("status", "linked")
@@ -44,7 +44,7 @@ export const getTelegramMetrics = createServerFn({ method: "GET" })
     }
 
     const { data: events, error: eventsError } = await supabaseAdmin
-      .from("telegram_delivery_events")
+      .from("whatsapp_delivery_events")
       .select("event_type,created_at")
       .eq("chat_id", connection.chat_id)
       .gte("created_at", start.toISOString())

@@ -1,10 +1,10 @@
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { getTelegramMetrics } from "@/lib/telegram-metrics.functions";
+import { getWhatsAppMetrics } from "@/lib/whatsapp-metrics.functions";
 
-export function TelegramMetricsChart({ compact = false }: { compact?: boolean }) {
-  const loadMetrics = useServerFn(getTelegramMetrics);
+export function WhatsAppMetricsChart({ compact = false }: { compact?: boolean }) {
+  const loadMetrics = useServerFn(getWhatsAppMetrics);
   const [metricDays, setMetricDays] = useState<7 | 30>(7);
   const [metrics, setMetrics] = useState<Awaited<ReturnType<typeof loadMetrics>> | null>(null);
   const [metricsLoading, setMetricsLoading] = useState(false);
@@ -21,7 +21,7 @@ export function TelegramMetricsChart({ compact = false }: { compact?: boolean })
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-semibold">Activité Telegram</p>
+          <p className="text-sm font-semibold">Activité WhatsApp</p>
           <p className="mt-1 text-xs text-muted-foreground">Alertes, récaps, commandes et digest</p>
         </div>
         <div className="flex rounded-lg border border-border p-1">
@@ -79,14 +79,14 @@ export function TelegramMetricsChart({ compact = false }: { compact?: boolean })
               <Bar
                 dataKey="urgent"
                 name="Urgences"
-                stackId="telegram"
+                stackId="whatsapp"
                 fill="#ef4444"
                 radius={[3, 3, 0, 0]}
               />
-              <Bar dataKey="phishing" name="Phishing" stackId="telegram" fill="#f59e0b" />
-              <Bar dataKey="recap" name="Récaps" stackId="telegram" fill="#8b5cf6" />
-              <Bar dataKey="digest" name="Digest" stackId="telegram" fill="#2563eb" />
-              <Bar dataKey="command" name="Commandes" stackId="telegram" fill="#14b8a6" />
+              <Bar dataKey="phishing" name="Phishing" stackId="whatsapp" fill="#f59e0b" />
+              <Bar dataKey="recap" name="Récaps" stackId="whatsapp" fill="#8b5cf6" />
+              <Bar dataKey="digest" name="Digest" stackId="whatsapp" fill="#2563eb" />
+              <Bar dataKey="command" name="Commandes" stackId="whatsapp" fill="#14b8a6" />
             </BarChart>
           </ResponsiveContainer>
         )}

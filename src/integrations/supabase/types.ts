@@ -177,6 +177,7 @@ export type Database = {
           last_seen_at: string | null;
           phishing_alerts: boolean;
           status: string;
+          summary_alerts: boolean;
           summary_digest: boolean;
           updated_at: string;
           urgent_alerts: boolean;
@@ -195,6 +196,7 @@ export type Database = {
           last_seen_at?: string | null;
           phishing_alerts?: boolean;
           status?: string;
+          summary_alerts?: boolean;
           summary_digest?: boolean;
           updated_at?: string;
           urgent_alerts?: boolean;
@@ -213,6 +215,7 @@ export type Database = {
           last_seen_at?: string | null;
           phishing_alerts?: boolean;
           status?: string;
+          summary_alerts?: boolean;
           summary_digest?: boolean;
           updated_at?: string;
           urgent_alerts?: boolean;
@@ -235,6 +238,7 @@ export type Database = {
           phone: string | null;
           phishing_alerts: boolean;
           status: string;
+          summary_alerts: boolean;
           summary_digest: boolean;
           updated_at: string;
           urgent_alerts: boolean;
@@ -253,6 +257,7 @@ export type Database = {
           phone?: string | null;
           phishing_alerts?: boolean;
           status?: string;
+          summary_alerts?: boolean;
           summary_digest?: boolean;
           updated_at?: string;
           urgent_alerts?: boolean;
@@ -271,6 +276,7 @@ export type Database = {
           phone?: string | null;
           phishing_alerts?: boolean;
           status?: string;
+          summary_alerts?: boolean;
           summary_digest?: boolean;
           updated_at?: string;
           urgent_alerts?: boolean;
@@ -522,24 +528,30 @@ export type Database = {
           avatar_url: string | null;
           created_at: string;
           email: string | null;
+          emails_analyzed_count: number;
           full_name: string | null;
           id: string;
+          plan: string;
           updated_at: string;
         };
         Insert: {
           avatar_url?: string | null;
           created_at?: string;
           email?: string | null;
+          emails_analyzed_count?: number;
           full_name?: string | null;
           id: string;
+          plan?: string;
           updated_at?: string;
         };
         Update: {
           avatar_url?: string | null;
           created_at?: string;
           email?: string | null;
+          emails_analyzed_count?: number;
           full_name?: string | null;
           id?: string;
+          plan?: string;
           updated_at?: string;
         };
         Relationships: [];
@@ -567,6 +579,19 @@ export type Database = {
           p_user_id: string;
         };
         Returns: boolean;
+      };
+      get_dashboard_stats: {
+        Args: {
+          p_user_id: string;
+        };
+        Returns: Json;
+      };
+      increment_emails_analyzed_count: {
+        Args: {
+          p_user_id: string;
+          p_delta?: number;
+        };
+        Returns: undefined;
       };
     };
     Enums: {

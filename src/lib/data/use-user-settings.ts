@@ -21,6 +21,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   telegramDigestTime: "08:00",
   whatsappDigestTime: "08:00",
   timezone: "UTC",
+  autoCleanupAfterDays: null,
 };
 
 export interface UserSettingsResult extends DataResult {

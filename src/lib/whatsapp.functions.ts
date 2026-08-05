@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const connectionFields =
-  "id,user_id,chat_id,phone,display_name,status,link_token_expires_at,linked_at,urgent_alerts,phishing_alerts,summary_digest,command_access,last_seen_at,created_at,updated_at";
+  "id,user_id,chat_id,phone,display_name,status,link_token_expires_at,linked_at,urgent_alerts,phishing_alerts,summary_alerts,summary_digest,command_access,last_seen_at,created_at,updated_at";
 
 type WhatsAppConnection = {
   id: string;
@@ -16,6 +16,7 @@ type WhatsAppConnection = {
   linked_at: string | null;
   urgent_alerts: boolean;
   phishing_alerts: boolean;
+  summary_alerts: boolean;
   summary_digest: boolean;
   command_access: boolean;
   last_seen_at: string | null;
@@ -70,11 +71,14 @@ export const createWhatsAppLink = createServerFn({ method: "POST" })
       throw new Error("WhatsApp (OpenWA) n'est pas encore configuré.");
     }
 
+    const supabaseAdmin = await getAdmin();
+    const { assertProMessaging } = await import("./plan.server");
+    await assertProMessaging(supabaseAdmin, context.userId);
+
     const waNumber = digitsOnlyPhone(process.env.OPENWA_WA_NUMBER ?? "");
     const token = bytesToBase64Url(crypto.getRandomValues(new Uint8Array(32)));
     const tokenHash = await hashToken(token);
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
-    const supabaseAdmin = await getAdmin();
     const { error } = await supabaseAdmin.from("whatsapp_connections").upsert(
       {
         user_id: context.userId,
@@ -113,6 +117,7 @@ export const updateWhatsAppPreferences = createServerFn({ method: "POST" })
       .object({
         urgentAlerts: z.boolean().optional(),
         phishingAlerts: z.boolean().optional(),
+        summaryAlerts: z.boolean().optional(),
         summaryDigest: z.boolean().optional(),
         commandAccess: z.boolean().optional(),
       })
@@ -123,6 +128,7 @@ export const updateWhatsAppPreferences = createServerFn({ method: "POST" })
     const update = {
       ...(data.urgentAlerts === undefined ? {} : { urgent_alerts: data.urgentAlerts }),
       ...(data.phishingAlerts === undefined ? {} : { phishing_alerts: data.phishingAlerts }),
+      ...(data.summaryAlerts === undefined ? {} : { summary_alerts: data.summaryAlerts }),
       ...(data.summaryDigest === undefined ? {} : { summary_digest: data.summaryDigest }),
       ...(data.commandAccess === undefined ? {} : { command_access: data.commandAccess }),
       updated_at: new Date().toISOString(),

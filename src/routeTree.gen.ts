@@ -24,6 +24,7 @@ import { Route as SecurityRouteImport } from './routes/security'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as ApiGmailCallbackRouteImport } from './routes/api/gmail/callback'
+import { Route as ApiPublicHooksCleanupEmailsRouteImport } from './routes/api/public/hooks/cleanup-emails'
 import { Route as ApiPublicHooksRiscRouteImport } from './routes/api/public/hooks/risc'
 import { Route as ApiPublicHooksSyncEmailsRouteImport } from './routes/api/public/hooks/sync-emails'
 import { Route as ApiPublicHooksTelegramDigestRouteImport } from './routes/api/public/hooks/telegram-digest'
@@ -105,6 +106,12 @@ const ApiGmailCallbackRoute = ApiGmailCallbackRouteImport.update({
   path: '/api/gmail/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksCleanupEmailsRoute =
+  ApiPublicHooksCleanupEmailsRouteImport.update({
+    id: '/api/public/hooks/cleanup-emails',
+    path: '/api/public/hooks/cleanup-emails',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksRiscRoute = ApiPublicHooksRiscRouteImport.update({
   id: '/api/public/hooks/risc',
   path: '/api/public/hooks/risc',
@@ -150,6 +157,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/terms': typeof TermsRoute
   '/api/gmail/callback': typeof ApiGmailCallbackRoute
+  '/api/public/hooks/cleanup-emails': typeof ApiPublicHooksCleanupEmailsRoute
   '/api/public/hooks/risc': typeof ApiPublicHooksRiscRoute
   '/api/public/hooks/sync-emails': typeof ApiPublicHooksSyncEmailsRoute
   '/api/public/hooks/telegram-digest': typeof ApiPublicHooksTelegramDigestRoute
@@ -172,6 +180,7 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/terms': typeof TermsRoute
   '/api/gmail/callback': typeof ApiGmailCallbackRoute
+  '/api/public/hooks/cleanup-emails': typeof ApiPublicHooksCleanupEmailsRoute
   '/api/public/hooks/risc': typeof ApiPublicHooksRiscRoute
   '/api/public/hooks/sync-emails': typeof ApiPublicHooksSyncEmailsRoute
   '/api/public/hooks/telegram-digest': typeof ApiPublicHooksTelegramDigestRoute
@@ -195,6 +204,7 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/terms': typeof TermsRoute
   '/api/gmail/callback': typeof ApiGmailCallbackRoute
+  '/api/public/hooks/cleanup-emails': typeof ApiPublicHooksCleanupEmailsRoute
   '/api/public/hooks/risc': typeof ApiPublicHooksRiscRoute
   '/api/public/hooks/sync-emails': typeof ApiPublicHooksSyncEmailsRoute
   '/api/public/hooks/telegram-digest': typeof ApiPublicHooksTelegramDigestRoute
@@ -219,6 +229,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/terms'
     | '/api/gmail/callback'
+    | '/api/public/hooks/cleanup-emails'
     | '/api/public/hooks/risc'
     | '/api/public/hooks/sync-emails'
     | '/api/public/hooks/telegram-digest'
@@ -241,6 +252,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/terms'
     | '/api/gmail/callback'
+    | '/api/public/hooks/cleanup-emails'
     | '/api/public/hooks/risc'
     | '/api/public/hooks/sync-emails'
     | '/api/public/hooks/telegram-digest'
@@ -263,6 +275,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/terms'
     | '/api/gmail/callback'
+    | '/api/public/hooks/cleanup-emails'
     | '/api/public/hooks/risc'
     | '/api/public/hooks/sync-emails'
     | '/api/public/hooks/telegram-digest'
@@ -286,6 +299,7 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   TermsRoute: typeof TermsRoute
   ApiGmailCallbackRoute: typeof ApiGmailCallbackRoute
+  ApiPublicHooksCleanupEmailsRoute: typeof ApiPublicHooksCleanupEmailsRoute
   ApiPublicHooksRiscRoute: typeof ApiPublicHooksRiscRoute
   ApiPublicHooksSyncEmailsRoute: typeof ApiPublicHooksSyncEmailsRoute
   ApiPublicHooksTelegramDigestRoute: typeof ApiPublicHooksTelegramDigestRoute
@@ -400,6 +414,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiGmailCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/cleanup-emails': {
+      id: '/api/public/hooks/cleanup-emails'
+      path: '/api/public/hooks/cleanup-emails'
+      fullPath: '/api/public/hooks/cleanup-emails'
+      preLoaderRoute: typeof ApiPublicHooksCleanupEmailsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/risc': {
       id: '/api/public/hooks/risc'
       path: '/api/public/hooks/risc'
@@ -454,6 +475,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   TermsRoute: TermsRoute,
   ApiGmailCallbackRoute: ApiGmailCallbackRoute,
+  ApiPublicHooksCleanupEmailsRoute: ApiPublicHooksCleanupEmailsRoute,
   ApiPublicHooksRiscRoute: ApiPublicHooksRiscRoute,
   ApiPublicHooksSyncEmailsRoute: ApiPublicHooksSyncEmailsRoute,
   ApiPublicHooksTelegramDigestRoute: ApiPublicHooksTelegramDigestRoute,

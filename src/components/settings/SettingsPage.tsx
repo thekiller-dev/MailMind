@@ -24,6 +24,8 @@ import {
 } from "@/lib/data-hooks";
 import { disconnectAccount, getGmailAuthUrl, syncMyAccount } from "@/lib/gmail.functions";
 import { createForwardingInbox, getForwardingInbox } from "@/lib/forwarding.functions";
+import { cleanupOldEmails } from "@/lib/email-cleanup.functions";
+import { getMyPlan } from "@/lib/plan.functions";
 import {
   createTelegramLink,
   getTelegramConnection,
@@ -38,6 +40,7 @@ import {
 } from "@/lib/whatsapp.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import type { UserPlan } from "@/lib/plan.server";
 
 const tabs = ["Comptes", "Préférences IA", "Listes", "Notifications", "Exports"] as const;
 type Tab = (typeof tabs)[number];
@@ -132,16 +135,35 @@ function Card({
 function AccountsTab() {
   const { accounts, loading } = useAccounts();
   const { user } = useUser();
+  const { settings, loading: settingsLoading, updateSettings } = useUserSettings();
   const connectGmail = useServerFn(getGmailAuthUrl);
   const sync = useServerFn(syncMyAccount);
   const disconnect = useServerFn(disconnectAccount);
   const getInbox = useServerFn(getForwardingInbox);
   const createInbox = useServerFn(createForwardingInbox);
+  const loadPlan = useServerFn(getMyPlan);
+  const runCleanup = useServerFn(cleanupOldEmails);
   const [pending, setPending] = useState<string | null>(null);
   const [sourceEmail, setSourceEmail] = useState("");
   const [inboxes, setInboxes] = useState<Awaited<ReturnType<typeof getInbox>>>([]);
   const [showGuide, setShowGuide] = useState(false);
   const [showForwarding, setShowForwarding] = useState(false);
+  const [plan, setPlan] = useState<UserPlan>("free");
+  const [maxAccounts, setMaxAccounts] = useState(1);
+
+  useEffect(() => {
+    void loadPlan()
+      .then((result) => {
+        setPlan(result.plan);
+        setMaxAccounts(result.maxEmailAccounts);
+      })
+      .catch(() => {
+        setPlan("free");
+        setMaxAccounts(1);
+      });
+  }, [loadPlan]);
+
+  const atAccountLimit = accounts.length >= maxAccounts;
 
   useEffect(() => {
     if (!sourceEmail && user?.email) setSourceEmail(user.email);
@@ -172,12 +194,37 @@ function AccountsTab() {
   }
 
   async function setupGmail() {
+    if (atAccountLimit) {
+      toast.error(
+        plan === "pro"
+          ? "Limite de 5 comptes e-mail atteinte."
+          : "Le plan Free permet un seul compte. Passez en Pro pour en ajouter jusqu’à 5.",
+      );
+      return;
+    }
     setPending("google");
     try {
       const result = await connectGmail({ data: { origin: window.location.origin } });
       window.location.assign(result.url);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Connexion Google impossible");
+      setPending(null);
+    }
+  }
+
+  async function handleCleanupNow() {
+    setPending("cleanup");
+    try {
+      const days = settings.autoCleanupAfterDays || 5;
+      const result = await runCleanup({ data: { days } });
+      toast.success(
+        result.deleted === 0
+          ? "Aucun e-mail à nettoyer."
+          : `${result.deleted} e-mail${result.deleted > 1 ? "s" : ""} nettoyé${result.deleted > 1 ? "s" : ""}.`,
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Nettoyage impossible");
+    } finally {
       setPending(null);
     }
   }
@@ -288,8 +335,15 @@ function AccountsTab() {
             <button
               type="button"
               onClick={setupGmail}
-              disabled={pending === "google"}
+              disabled={pending === "google" || atAccountLimit}
               aria-busy={pending === "google"}
+              title={
+                atAccountLimit
+                  ? plan === "pro"
+                    ? "Limite de 5 comptes atteinte"
+                    : "Plan Free : 1 compte maximum"
+                  : undefined
+              }
               className="flex h-11 items-center justify-center gap-2 rounded-xl bg-foreground px-4 text-sm font-semibold text-background disabled:opacity-50"
             >
               {pending === "google" ? (
@@ -306,7 +360,45 @@ function AccountsTab() {
               Comment connecter un e-mail
             </Link>
           </div>
+          <p className="mt-3 text-xs text-muted-foreground">
+            Plan {plan === "pro" ? "Pro" : "Free"} — {accounts.length}/{maxAccounts} compte
+            {maxAccounts > 1 ? "s" : ""}
+            {atAccountLimit && plan === "free" ? " · Passez en Pro pour jusqu’à 5 comptes." : ""}
+          </p>
         </div>
+      </Card>
+
+      <Card
+        title="Rétention des e-mails"
+        desc="Supprimez automatiquement les e-mails trop anciens de MailMind (pas de votre boîte Gmail)."
+      >
+        {settingsLoading ? (
+          <p className="text-sm text-muted-foreground">Chargement…</p>
+        ) : (
+          <div className="space-y-4">
+            <Toggle
+              label="Nettoyage auto après 5 jours"
+              on={Boolean(settings.autoCleanupAfterDays && settings.autoCleanupAfterDays > 0)}
+              onChange={(value) =>
+                void updateSettings({ autoCleanupAfterDays: value ? 5 : null })
+              }
+            />
+            <button
+              type="button"
+              onClick={() => void handleCleanupNow()}
+              disabled={pending === "cleanup"}
+              aria-busy={pending === "cleanup"}
+              className="inline-flex items-center gap-2 rounded-md border border-border px-4 py-2 text-sm font-semibold hover:bg-surface-muted disabled:opacity-50"
+            >
+              {pending === "cleanup" ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Trash2 className="size-4" />
+              )}
+              Nettoyer maintenant
+            </button>
+          </div>
+        )}
       </Card>
 
       <Card
@@ -412,7 +504,7 @@ function AccountsTab() {
                 <button
                   type="button"
                   onClick={setupForwarding}
-                  disabled={pending === "forwarding" || !sourceEmail}
+                  disabled={pending === "forwarding" || !sourceEmail || atAccountLimit}
                   aria-busy={pending === "forwarding"}
                   className="flex h-10 items-center justify-center gap-2 rounded-md bg-foreground px-4 text-sm font-semibold text-background disabled:opacity-50"
                 >
@@ -504,11 +596,38 @@ function ListsTab() {
 
 function NotificationsTab() {
   const { settings, loading, updateSettings } = useUserSettings();
+  const loadPlan = useServerFn(getMyPlan);
+  const [plan, setPlan] = useState<UserPlan>("free");
+
+  useEffect(() => {
+    void loadPlan()
+      .then((result) => setPlan(result.plan))
+      .catch(() => setPlan("free"));
+  }, [loadPlan]);
+
   if (loading) return <p className="text-sm text-muted-foreground">Chargement…</p>;
+  const isPro = plan === "pro";
   return (
     <>
-      <TelegramCard settings={settings} updateSettings={updateSettings} />
-      <WhatsAppCard settings={settings} updateSettings={updateSettings} />
+      {isPro ? (
+        <>
+          <TelegramCard settings={settings} updateSettings={updateSettings} />
+          <WhatsAppCard settings={settings} updateSettings={updateSettings} />
+        </>
+      ) : (
+        <Card
+          title="Telegram & WhatsApp — Pro"
+          desc="Les alertes, récaps et digests sur Telegram et WhatsApp sont réservés au plan Pro."
+        >
+          <p className="text-sm text-muted-foreground">
+            Passez en Pro pour lier vos canaux de messagerie, recevoir les récaps après chaque
+            analyse et piloter MailMind par commandes.
+          </p>
+          <p className="mt-4 inline-flex rounded-full border border-border px-3 py-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+            Plan actuel : Free
+          </p>
+        </Card>
+      )}
       <Card title="Canaux">
         <Toggle
           label="Notifications push — bientôt disponible"
@@ -593,7 +712,7 @@ function TelegramCard({
   }
 
   async function changePreference(
-    field: "urgentAlerts" | "phishingAlerts" | "summaryDigest" | "commandAccess",
+    field: "urgentAlerts" | "phishingAlerts" | "summaryAlerts" | "summaryDigest" | "commandAccess",
     value: boolean,
   ) {
     try {
@@ -678,6 +797,11 @@ function TelegramCard({
             </button>
           </div>
           <div className="mt-4 space-y-1">
+            <Toggle
+              label="Récap après chaque analyse"
+              on={connection.summary_alerts !== false}
+              onChange={(value) => void changePreference("summaryAlerts", value)}
+            />
             <Toggle
               label="Alertes urgentes"
               on={connection.urgent_alerts}
@@ -828,7 +952,7 @@ function WhatsAppCard({
   }
 
   async function changePreference(
-    field: "urgentAlerts" | "phishingAlerts" | "summaryDigest" | "commandAccess",
+    field: "urgentAlerts" | "phishingAlerts" | "summaryAlerts" | "summaryDigest" | "commandAccess",
     value: boolean,
   ) {
     try {
@@ -940,6 +1064,11 @@ function WhatsAppCard({
             </button>
           </div>
           <div className="mt-4 space-y-1">
+            <Toggle
+              label="Récap après chaque analyse"
+              on={connection.summary_alerts !== false}
+              onChange={(value) => void changePreference("summaryAlerts", value)}
+            />
             <Toggle
               label="Alertes urgentes"
               on={connection.urgent_alerts}

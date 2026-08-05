@@ -56,9 +56,15 @@ export const Route = createFileRoute("/api/public/hooks/whatsapp")({
           payload.payload?.event ??
           "";
         if (eventName === "test") {
+          // OpenWA « Test webhook » : prouve HMAC + reachabilité, PAS une liaison LIEN.
+          console.info("whatsapp webhook test ok", {
+            sessionId: payload.sessionId ?? payload.payload?.sessionId ?? null,
+            bodyBytes: rawBody.length,
+          });
           return Response.json({ ok: true, test: true });
         }
         if (eventName && eventName !== "message.received") {
+          console.info("whatsapp webhook ignored event", { event: eventName });
           return Response.json({ ok: true, ignored: true, event: eventName });
         }
 
