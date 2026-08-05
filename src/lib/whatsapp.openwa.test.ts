@@ -7,6 +7,7 @@ import {
   verifyOpenWaSignature,
 } from "./openwa.server";
 import {
+  extractCommandArgument,
   extractLinkToken,
   resolveWhatsAppCommand,
   sanitizeWhatsAppText,
@@ -51,6 +52,13 @@ describe("whatsapp-commands", () => {
     expect(resolveWhatsAppCommand("/aide")).toBe("/help");
     expect(resolveWhatsAppCommand("montre mes derniers mails")).toBe("/recents");
     expect(resolveWhatsAppCommand("y a-t-il une urgence ?")).toBe("/urgent");
+  });
+
+  it("extrait l’id court des commandes action", () => {
+    expect(extractCommandArgument("/draft ab12cd34")).toBe("ab12cd34");
+    expect(extractCommandArgument("/archive  ab12cd34  extra")).toBe("ab12cd34");
+    expect(extractCommandArgument("prépare un brouillon ab12cd34")).toBe("ab12cd34");
+    expect(extractCommandArgument("/draft")).toBeUndefined();
   });
 
   it("nettoie les caractères invisibles WhatsApp", () => {
