@@ -10,7 +10,7 @@ function sameSecret(provided: string, expected: string): boolean {
 
 /**
  * Digest WhatsApp quotidien (même auth CRON_SECRET que telegram-digest).
- * Sur Hobby, le cron 08:00 UTC de telegram-digest appelle aussi runWhatsAppDigests ;
+ * Sur Hobby, le cron 17:00 UTC de telegram-digest appelle aussi runWhatsAppDigests ;
  * cette route reste disponible pour un appel manuel / plan Pro.
  */
 export const Route = createFileRoute("/api/public/hooks/whatsapp-digest")({

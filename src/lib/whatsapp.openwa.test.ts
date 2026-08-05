@@ -11,7 +11,7 @@ import {
   resolveWhatsAppCommand,
   sanitizeWhatsAppText,
 } from "./whatsapp-commands";
-import { isDigestDue } from "./whatsapp-digest.server";
+import { isDigestDue, isDigestDueOrCatchUp } from "./whatsapp-digest.server";
 import { normalizeOpenWaIncomingMessage } from "./whatsapp-webhook.server";
 
 describe("openwa.server helpers", () => {
@@ -151,5 +151,11 @@ describe("whatsapp digest schedule", () => {
     const noonUtc = new Date("2026-08-03T08:05:00.000Z");
     expect(isDigestDue("08:00", "UTC", noonUtc)).toBe("2026-08-03");
     expect(isDigestDue("10:00", "UTC", noonUtc)).toBeNull();
+  });
+
+  it("catch-up après l’heure configurée (cron quotidien Hobby)", () => {
+    const cronUtc17 = new Date("2026-08-05T17:00:00.000Z");
+    expect(isDigestDueOrCatchUp("18:00", "Europe/Paris", cronUtc17)).toBe("2026-08-05");
+    expect(isDigestDueOrCatchUp("20:00", "Europe/Paris", cronUtc17)).toBeNull();
   });
 });

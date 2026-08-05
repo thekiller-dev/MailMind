@@ -73,7 +73,10 @@ function isSecurityAlert(email: EmailNotification): boolean {
   );
 }
 
-async function getUserPlan(supabase: SupabaseClient, userId: string): Promise<"free" | "pro"> {
+export async function getUserPlan(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<"free" | "pro"> {
   const { data, error } = await supabase
     .from("profiles")
     .select("plan")
