@@ -263,28 +263,30 @@ Deno.serve(async (request) => {
         if (analysis && emailId) {
           await supabase.from("emails").update(analysis).eq("id", emailId);
           try {
-            await notifyEmailAnalysis(supabase, account.user_id, {
-              id: emailId,
-              sender: email.from,
-              subject: email.subject,
-              summary: analysis.summary,
-              category: analysis.category,
-              risk_score: analysis.risk_score,
-              risk_reason: analysis.risk_reason,
+            await supabase.rpc("increment_emails_analyzed_count", {
+              p_user_id: account.user_id,
+              p_delta: 1,
             });
+          } catch (countError) {
+            console.error("analyzed count increment failed", countError);
+          }
+          const notification = {
+            id: emailId,
+            sender: email.from,
+            subject: email.subject,
+            summary: analysis.summary,
+            category: analysis.category,
+            intent: analysis.intent,
+            risk_score: analysis.risk_score,
+            risk_reason: analysis.risk_reason,
+          };
+          try {
+            await notifyEmailAnalysis(supabase, account.user_id, notification);
           } catch (notificationError) {
             console.error("telegram notification failed", notificationError);
           }
           try {
-            await notifyWhatsAppEmailAnalysis(supabase, account.user_id, {
-              id: emailId,
-              sender: email.from,
-              subject: email.subject,
-              summary: analysis.summary,
-              category: analysis.category,
-              risk_score: analysis.risk_score,
-              risk_reason: analysis.risk_reason,
-            });
+            await notifyWhatsAppEmailAnalysis(supabase, account.user_id, notification);
           } catch (notificationError) {
             console.error("whatsapp notification failed", notificationError);
           }
