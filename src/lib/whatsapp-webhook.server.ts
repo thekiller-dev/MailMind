@@ -1,6 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { phoneFromChatId, sendOpenWaText } from "./openwa.server";
+import { shortEmailRef } from "./product-insights";
+import { runChannelAction } from "./channel-actions.server";
 import {
+  extractCommandArgument,
   extractLinkToken,
   hashLinkToken,
   resolveWhatsAppCommand,
@@ -95,8 +98,13 @@ async function sendHelp(chatId: string) {
       "",
       "/status — vérifier la connexion",
       "/recents — derniers mails et résumés",
+      "/digest — digest 60 secondes",
       "/alerts — alertes récentes",
       "/urgences — alertes urgentes",
+      "/archive <id> — archiver un mail",
+      "/draft <id> — brouillon de réponse (Pro)",
+      "/snooze <id> — remettre à plus tard",
+      "/share <id> — partager une alerte sécu",
       "/unlink — retirer ce chat de MailMind",
       "/help — afficher cette aide",
     ].join("\n"),
@@ -106,7 +114,7 @@ async function sendHelp(chatId: string) {
 async function sendDigest(supabase: SupabaseClient, chatId: string, userId: string) {
   const { data: emails, error } = await supabase
     .from("emails")
-    .select("sender,subject,summary,category,risk_score,received_at")
+    .select("id,sender,subject,summary,category,risk_score,received_at")
     .eq("user_id", userId)
     .order("received_at", { ascending: false })
     .limit(10);
@@ -118,7 +126,7 @@ async function sendDigest(supabase: SupabaseClient, chatId: string, userId: stri
 
   const lines = emails.map((email) => {
     const risk = Number(email.risk_score ?? 0) >= 0.6 || email.category === "Phishing" ? " ⚠️" : "";
-    return `*${email.subject || "(sans objet)"}${risk}*\n${email.summary || email.sender || "Sans résumé"}`;
+    return `*${email.subject || "(sans objet)"}${risk}*\nRéf : ${shortEmailRef(email.id)}\n${email.summary || email.sender || "Sans résumé"}`;
   });
   await sendOpenWaText(chatId, `*Derniers résumés*\n\n${lines.join("\n\n")}`);
 }
@@ -131,7 +139,7 @@ async function sendAlerts(
 ) {
   const { data: emails, error } = await supabase
     .from("emails")
-    .select("sender,subject,summary,category,risk_score,risk_reason")
+    .select("id,sender,subject,summary,category,risk_score,risk_reason")
     .eq("user_id", userId)
     .order("received_at", { ascending: false })
     .limit(50);
@@ -153,7 +161,7 @@ async function sendAlerts(
 
   const lines = alerts.map(
     (email) =>
-      `*${email.subject || "(sans objet)"}*\n${email.summary || email.sender || "Sans résumé"}`,
+      `*${email.subject || "(sans objet)"}*\nRéf : ${shortEmailRef(email.id)}\n${email.summary || email.sender || "Sans résumé"}`,
   );
   await sendOpenWaText(
     chatId,
@@ -356,6 +364,27 @@ export async function handleOpenWaMessageReceived(
     case "/urgent":
       await sendAlerts(supabase, chatId, connection.user_id, "urgent");
       break;
+    case "/archive":
+    case "/draft":
+    case "/snooze":
+    case "/share": {
+      try {
+        const result = await runChannelAction(
+          supabase,
+          connection.user_id,
+          command,
+          extractCommandArgument(body),
+        );
+        await sendOpenWaText(chatId, result);
+      } catch (error) {
+        console.error("whatsapp channel action failed", { command, error });
+        await sendOpenWaText(
+          chatId,
+          error instanceof Error ? error.message : "Action impossible pour l’instant.",
+        );
+      }
+      break;
+    }
     case "/unlink":
       await supabase
         .from("whatsapp_connections")
