@@ -157,12 +157,18 @@ async function handleLinkedMessage(
     return;
   }
 
-  if (!commandAccess && parsed.command !== "/unlink" && parsed.command !== "/help") {
+  if (
+    !commandAccess &&
+    parsed.command !== "/unlink" &&
+    parsed.command !== "/help" &&
+    parsed.command !== "/start"
+  ) {
     await sendKappelasText(msg.chat_id, "Les commandes sont désactivées pour ce compte.");
     return;
   }
 
   switch (parsed.command) {
+    case "/start":
     case "/help":
       await sendHelp(msg.chat_id);
       return;
@@ -233,9 +239,14 @@ async function handleMessage(supabase: SupabaseClient, msg: Message): Promise<vo
     .maybeSingle();
 
   if (!connection) {
+    // Bare /start without link token — welcome instead of silence
+    if (/^\/start(?:@\w+)?$/i.test(text) || /^\/help(?:@\w+)?$/i.test(text)) {
+      await sendHelp(msg.chat_id);
+      return;
+    }
     await sendKappelasText(
       msg.chat_id,
-      "Ce chat n'est pas lié à MailMind. Ouvrez Paramètres → Notifications → Kappelas pour générer un lien.",
+      "Ce chat n'est pas lié à MailMind. Ouvrez Paramètres → Notifications → Kappelas pour générer un lien, puis envoyez LIEN <token> ici.",
     );
     return;
   }
