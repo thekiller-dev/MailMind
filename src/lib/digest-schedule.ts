@@ -87,6 +87,10 @@ export function startOfLocalDay(timeZone: string, now = new Date()): Date {
   return new Date(now.getTime() - msFromMidnight);
 }
 
-export function digestEventId(channel: "telegram" | "whatsapp", localDate: string, userId: string) {
+export function digestEventId(
+  channel: "telegram" | "whatsapp" | "kappelas",
+  localDate: string,
+  userId: string,
+) {
   return `digest:${channel}:${localDate}:${userId}`;
 }

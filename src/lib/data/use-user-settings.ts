@@ -20,6 +20,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   quietEnd: "07:30",
   telegramDigestTime: "08:00",
   whatsappDigestTime: "08:00",
+  kappelasDigestTime: "08:00",
   timezone: "UTC",
   autoCleanupAfterDays: null,
 };
@@ -57,7 +58,7 @@ export function useUserSettings(): UserSettingsResult {
         const data = await dedupeDataRequest(`settings:${userId}`, async () => {
           const { data: settingsData, error: queryError } = await supabase
             .from("user_settings")
-            .select("settings,telegram_digest_time,whatsapp_digest_time,timezone")
+            .select("settings,telegram_digest_time,whatsapp_digest_time,kappelas_digest_time,timezone")
             .eq("user_id", userId)
             .maybeSingle();
           if (queryError) throw queryError;
@@ -72,6 +73,8 @@ export function useUserSettings(): UserSettingsResult {
             data?.telegram_digest_time?.slice(0, 5) ?? DEFAULT_SETTINGS.telegramDigestTime,
           whatsappDigestTime:
             data?.whatsapp_digest_time?.slice(0, 5) ?? DEFAULT_SETTINGS.whatsappDigestTime,
+          kappelasDigestTime:
+            data?.kappelas_digest_time?.slice(0, 5) ?? DEFAULT_SETTINGS.kappelasDigestTime,
           timezone: data?.timezone ?? DEFAULT_SETTINGS.timezone,
         } as UserSettings);
         setError(null);
@@ -105,6 +108,7 @@ export function useUserSettings(): UserSettingsResult {
         settings: next,
         telegram_digest_time: next.telegramDigestTime,
         whatsapp_digest_time: next.whatsappDigestTime,
+        kappelas_digest_time: next.kappelasDigestTime,
         timezone: next.timezone,
         updated_at: new Date().toISOString(),
       });

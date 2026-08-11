@@ -28,14 +28,27 @@ function positiveInteger(value: string | undefined, fallback: number): number {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
 }
 
+async function dailyLimitForUser(
+  supabase: SupabaseClient,
+  userId: string,
+  eventType: AiUsageEventType,
+): Promise<number> {
+  const freeAnalyze = positiveInteger(process.env.AI_DAILY_ANALYZE_QUOTA, 100);
+  const proAnalyze = positiveInteger(process.env.AI_DAILY_ANALYZE_QUOTA_PRO, 2000);
+  const freeReply = positiveInteger(process.env.AI_DAILY_REPLY_QUOTA, 20);
+  const proReply = positiveInteger(process.env.AI_DAILY_REPLY_QUOTA_PRO, 200);
+
+  const { data } = await supabase.from("profiles").select("plan").eq("id", userId).maybeSingle();
+  const isPro = data?.plan === "pro";
+  if (eventType === "analysis") return isPro ? proAnalyze : freeAnalyze;
+  return isPro ? proReply : freeReply;
+}
+
 export async function consumeAiQuota(
   supabase: SupabaseClient,
   input: ConsumeAiQuotaInput,
 ): Promise<void> {
-  const dailyLimit =
-    input.eventType === "analysis"
-      ? positiveInteger(process.env.AI_DAILY_ANALYZE_QUOTA, 100)
-      : positiveInteger(process.env.AI_DAILY_REPLY_QUOTA, 20);
+  const dailyLimit = await dailyLimitForUser(supabase, input.userId, input.eventType);
   const minuteLimit = positiveInteger(process.env.AI_RATE_LIMIT_PER_MINUTE, 10);
 
   const { data, error } = await supabase.rpc("consume_usage_quota", {

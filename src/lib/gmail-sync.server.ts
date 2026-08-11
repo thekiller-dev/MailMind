@@ -13,6 +13,7 @@ import { decryptSecret, encryptSecret, isEncryptedSecret } from "./secret-crypto
 import { buildPreferenceAnalysis, getPreferenceList, matchesSenderList } from "./business-rules";
 import { notifyEmailAnalysis } from "./telegram-notify.server";
 import { notifyWhatsAppEmailAnalysis } from "./whatsapp-notify.server";
+import { notifyKappelasEmailAnalysis } from "./kappelas-notify.server";
 import { isWithinQuietHours } from "./analysis-settings";
 import { incrementEmailsAnalyzedCount } from "./plan.server";
 
@@ -29,6 +30,11 @@ async function notifyChannels(
   }
   try {
     await notifyWhatsAppEmailAnalysis(supabase, userId, email);
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : String(error));
+  }
+  try {
+    await notifyKappelasEmailAnalysis(supabase, userId, email);
   } catch (error) {
     errors.push(error instanceof Error ? error.message : String(error));
   }

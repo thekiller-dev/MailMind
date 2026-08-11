@@ -11,6 +11,11 @@ import { syncGmailAccount } from "./gmail-sync.server";
 const QUEUE_NAME = "gmail_sync_jobs";
 const MAX_ATTEMPTS = 5;
 
+/** Backoff before re-queue: 15 * 2^attempt seconds, capped at 15 minutes. */
+export function computeSyncRetrySleepSeconds(attempt: number): number {
+  return Math.min(15 * 2 ** attempt, 15 * 60);
+}
+
 const SyncJobSchema = z.object({
   accountId: z.string().uuid(),
   attempt: z.number().int().min(1).max(MAX_ATTEMPTS),
@@ -160,7 +165,7 @@ export async function processGmailSyncQueue(supabase: DatabaseClient, batchSize 
         const retryMessageId = await sendJob(
           supabase,
           { ...job, attempt: job.attempt + 1 },
-          Math.min(15 * 2 ** job.attempt, 15 * 60),
+          computeSyncRetrySleepSeconds(job.attempt),
         );
         await archiveMessage(supabase, message.msg_id);
         await supabase

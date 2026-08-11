@@ -9,12 +9,12 @@ export const Route = createFileRoute("/pricing")({
       {
         name: "description",
         content:
-          "Free, Pro et Enterprise. Une tarification simple à l'échelle de votre messagerie.",
+          "Free pour démarrer, Pro à 19€/mois pour 5 comptes, Telegram, WhatsApp et plus d'analyses IA.",
       },
       { property: "og:title", content: "Tarifs — MailMind AI" },
       {
         property: "og:description",
-        content: "Free pour commencer. Pro à 19€/mois. Enterprise sur mesure.",
+        content: "Free pour commencer. Pro à 19€/mois avec canaux messagerie et 5 comptes.",
       },
     ],
   }),
@@ -23,45 +23,32 @@ export const Route = createFileRoute("/pricing")({
 
 const plans = [
   {
-    name: "Standard",
+    name: "Free",
     price: "0€",
     period: "/mois",
-    cta: "Gratuit pour toujours",
+    cta: "Commencer gratuitement",
+    href: "/auth" as const,
     primary: false,
     features: [
-      "1 compte connecté",
-      "100 analyses / jour",
-      "Détection standard",
-      "Digest hebdomadaire",
+      "1 compte Gmail connecté",
+      "100 analyses IA / jour",
+      "Inbox unifiée + détection phishing",
+      "Rétention configurable",
     ],
   },
   {
-    name: "Professional",
+    name: "Pro",
     price: "19€",
     period: "/mois",
-    cta: "Démarrer Pro",
+    cta: "Passer en Pro",
+    href: "/auth" as const,
     primary: true,
     features: [
-      "5 comptes connectés",
-      "Analyses illimitées",
-      "Extraction d'entités avancée",
-      "Détection phishing premium",
+      "Jusqu’à 5 comptes Gmail",
+      "2 000 analyses IA / jour",
+      "Telegram & WhatsApp (alertes, digests, /draft)",
       "Suggestions de réponse IA",
-      "Support prioritaire",
-    ],
-  },
-  {
-    name: "Enterprise",
-    price: "Sur mesure",
-    period: "",
-    cta: "Parler aux ventes",
-    primary: false,
-    features: [
-      "Comptes illimités",
-      "SSO & conformité",
-      "Modèles IA personnalisés",
-      "Déploiement on-premise",
-      "SLA dédié",
+      "Portail de facturation Stripe",
     ],
   },
 ];
@@ -77,16 +64,17 @@ function Pricing() {
               Pricing
             </span>
             <h1 className="mt-3 font-display text-4xl font-bold md:text-5xl">
-              Une tarification simple, à votre échelle.
+              Free pour démarrer. Pro quand vous scalez.
             </h1>
             <p className="mt-4 text-muted-foreground">
-              Démarrez gratuitement. Évoluez quand votre inbox grossit. Sans engagement.
+              Les limites affichées correspondent exactement au produit. Paiement sécurisé via
+              Stripe.
             </p>
           </div>
         </section>
 
         <section className="px-6 pb-24">
-          <div className="mx-auto grid max-w-5xl gap-8 md:grid-cols-3">
+          <div className="mx-auto grid max-w-4xl gap-8 md:grid-cols-2">
             {plans.map((p) => (
               <div
                 key={p.name}
@@ -98,7 +86,7 @@ function Pricing() {
               >
                 {p.primary && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3 py-1 font-mono text-[10px] font-bold uppercase text-primary-foreground">
-                    Le plus populaire
+                    Recommandé
                   </div>
                 )}
                 <span
@@ -121,13 +109,11 @@ function Pricing() {
                   ))}
                 </ul>
                 <Link
-                  to={p.name === "Enterprise" ? "/" : "/auth"}
+                  to={p.href}
                   className={`w-full rounded-lg py-2.5 text-center text-sm font-semibold transition-transform active:scale-95 ${
                     p.primary
                       ? "bg-primary text-primary-foreground"
-                      : p.name === "Enterprise"
-                        ? "bg-foreground text-background"
-                        : "bg-surface-muted text-foreground"
+                      : "bg-surface-muted text-foreground"
                   }`}
                 >
                   {p.cta}
@@ -135,6 +121,10 @@ function Pricing() {
               </div>
             ))}
           </div>
+          <p className="mx-auto mt-8 max-w-2xl text-center text-xs text-muted-foreground">
+            Après inscription, l’upgrade Pro se fait depuis Paramètres → Abonnement. Besoin
+            d’Enterprise (SSO, on-prem) ? Contactez-nous via le site.
+          </p>
         </section>
       </main>
       <SiteFooter />

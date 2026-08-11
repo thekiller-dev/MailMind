@@ -1156,44 +1156,41 @@ function Stats() {
 
 // ---------- Pricing comparison ----------
 const pricingPlans = [
-  { name: "Standard", price: "0€", period: "/mois", cta: "Démarrer", primary: false },
-  { name: "Professional", price: "19€", period: "/mois", cta: "Choisir Pro", primary: true },
-  { name: "Enterprise", price: "Sur mesure", period: "", cta: "Nous contacter", primary: false },
+  { name: "Free", price: "0€", period: "/mois", cta: "Démarrer", primary: false },
+  { name: "Pro", price: "19€", period: "/mois", cta: "Choisir Pro", primary: true },
 ];
 type Cell = boolean | string;
-const pricingMatrix: { group: string; rows: { label: string; values: [Cell, Cell, Cell] }[] }[] = [
+const pricingMatrix: { group: string; rows: { label: string; values: [Cell, Cell] }[] }[] = [
   {
     group: "Comptes & volume",
     rows: [
-      { label: "Comptes mail connectés", values: ["1", "5", "Illimité"] },
-      { label: "Analyses IA / jour", values: ["100", "Illimité", "Illimité"] },
-      { label: "Historique conservé", values: ["7 jours", "90 jours", "Personnalisé"] },
+      { label: "Comptes mail connectés", values: ["1", "5"] },
+      { label: "Analyses IA / jour", values: ["100", "2 000"] },
+      { label: "Rétention configurable", values: [true, true] },
     ],
   },
   {
     group: "Intelligence",
     rows: [
-      { label: "Résumés sémantiques", values: [true, true, true] },
-      { label: "Extraction d'entités avancée", values: [false, true, true] },
-      { label: "Suggestions de réponses IA", values: [false, true, true] },
-      { label: "Modèles IA personnalisés", values: [false, false, true] },
+      { label: "Résumés sémantiques", values: [true, true] },
+      { label: "Détection phishing", values: [true, true] },
+      { label: "Suggestions de réponses IA", values: [false, true] },
+      { label: "Commande /draft messagerie", values: [false, true] },
     ],
   },
   {
-    group: "Sécurité",
+    group: "Canaux",
     rows: [
-      { label: "Pare-feu phishing standard", values: [true, true, true] },
-      { label: "Détection phishing premium", values: [false, true, true] },
-      { label: "SSO / SAML", values: [false, false, true] },
-      { label: "Déploiement on-premise", values: [false, false, true] },
+      { label: "Alertes Telegram", values: [false, true] },
+      { label: "Alertes WhatsApp", values: [false, true] },
+      { label: "Digests quotidiens", values: [false, true] },
     ],
   },
   {
-    group: "Support",
+    group: "Facturation",
     rows: [
-      { label: "Support communauté", values: [true, true, true] },
-      { label: "Support prioritaire", values: [false, true, true] },
-      { label: "SLA dédié", values: [false, false, true] },
+      { label: "Checkout Stripe", values: [false, true] },
+      { label: "Portail abonnement", values: [false, true] },
     ],
   },
 ];
@@ -1216,10 +1213,10 @@ function PricingTable() {
 
         <div data-reveal className="overflow-hidden rounded-3xl glass">
           {/* Plan headers */}
-          <div className="grid grid-cols-[1.4fr_1fr_1fr_1fr] gap-2 border-b border-border bg-surface/50 px-4 py-5 sm:px-6 md:gap-4">
+          <div className="grid grid-cols-[1.4fr_1fr_1fr] gap-2 border-b border-border bg-surface/50 px-4 py-5 sm:px-6 md:gap-4">
             <div className="hidden sm:block" />
             {pricingPlans.map((p) => (
-              <div key={p.name} className={`text-center ${p.primary ? "" : ""}`}>
+              <div key={p.name} className="text-center">
                 <span
                   className={`font-mono text-[10px] font-bold uppercase tracking-widest ${p.primary ? "text-foreground" : "text-muted-foreground"}`}
                 >
@@ -1248,7 +1245,7 @@ function PricingTable() {
               {section.rows.map((row, i) => (
                 <div
                   key={row.label}
-                  className={`grid grid-cols-[1.4fr_1fr_1fr_1fr] items-center gap-2 px-4 py-3 text-sm sm:px-6 md:gap-4 ${
+                  className={`grid grid-cols-[1.4fr_1fr_1fr] items-center gap-2 px-4 py-3 text-sm sm:px-6 md:gap-4 ${
                     i % 2 ? "" : "bg-background/40"
                   }`}
                 >
@@ -1272,12 +1269,12 @@ function PricingTable() {
           ))}
 
           {/* CTA row */}
-          <div className="grid grid-cols-[1.4fr_1fr_1fr_1fr] gap-2 border-t border-border bg-surface/50 px-4 py-5 sm:px-6 md:gap-4">
+          <div className="grid grid-cols-[1.4fr_1fr_1fr] gap-2 border-t border-border bg-surface/50 px-4 py-5 sm:px-6 md:gap-4">
             <div className="hidden sm:block" />
             {pricingPlans.map((p) => (
               <Link
                 key={p.name}
-                to={p.name === "Enterprise" ? "/" : "/auth"}
+                to="/auth"
                 className={`w-full rounded-full py-2 text-center text-xs font-semibold transition-transform active:scale-95 ${
                   p.primary ? "bg-foreground text-background" : "glass-subtle text-foreground"
                 }`}

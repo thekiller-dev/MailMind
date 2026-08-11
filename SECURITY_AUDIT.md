@@ -28,18 +28,21 @@
 - Vercel production : aucun runtime error trouvé sur les dernières 24 heures.
 - Supabase Security Advisors : l’exposition de `rls_auto_enable` a disparu.
 
-## Points à traiter avant la production Telegram
+## Points à traiter avant la production Telegram / billing
 
-1. Activer la protection Supabase contre les mots de passe compromis :
-   https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection
+1. Activer la protection Supabase contre les mots de passe compromis (Dashboard,
+   Auth → Email → Prevent use of leaked passwords). `minimum_password_length = 10`
+   est versionné dans `supabase/config.toml` pour le local.
 2. Créer le bot avec BotFather et définir `TELEGRAM_BOT_TOKEN`,
    `TELEGRAM_BOT_USERNAME` et `TELEGRAM_WEBHOOK_SECRET` dans Supabase et Vercel.
 3. Enregistrer l’URL `https://udfkcqhuhqpunvlhgpdc.supabase.co/functions/v1/telegram-webhook`
    avec `setWebhook`.
 4. Régénérer les secrets qui ont déjà été exposés dans un fichier `.env` ou dans
    un historique de conversation : clés Supabase, Google OAuth, IA, Resend et
-   tout autre secret concerné.
-5. Le lint complet peut signaler une vulnérabilité de développement `brace-expansion`
+   tout autre secret concerné. Vérifier avec `pnpm check:secrets`.
+5. Configurer Stripe (`STRIPE_SECRET_KEY`, `STRIPE_PRICE_PRO`, `STRIPE_WEBHOOK_SECRET`)
+   et le endpoint `https://www.mailmind.me/api/public/hooks/stripe`.
+6. Le lint complet peut signaler une vulnérabilité de développement `brace-expansion`
    héritée d’ESLint ; l’audit de production est propre. Il faut mettre à jour
    la chaîne ESLint dès qu’une version compatible est disponible.
 

@@ -33,10 +33,12 @@ async function handleDigestCron(request: Request) {
   }
 
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { runTelegramDigests, runWhatsAppDigests } = await import("@/lib/digest.server");
+  const { runTelegramDigests, runWhatsAppDigests, runKappelasDigests } =
+    await import("@/lib/digest.server");
 
   let sent = 0;
   let whatsappSent = 0;
+  let kappelasSent = 0;
   try {
     const tg = await runTelegramDigests(supabaseAdmin);
     sent = tg.sent;
@@ -52,5 +54,12 @@ async function handleDigestCron(request: Request) {
     console.error("whatsapp digest failed", error);
   }
 
-  return Response.json({ ok: true, sent, whatsappSent });
+  try {
+    const kp = await runKappelasDigests(supabaseAdmin);
+    kappelasSent = kp.sent;
+  } catch (error) {
+    console.error("kappelas digest failed", error);
+  }
+
+  return Response.json({ ok: true, sent, whatsappSent, kappelasSent });
 }

@@ -27,6 +27,16 @@ import { createForwardingInbox, getForwardingInbox } from "@/lib/forwarding.func
 import { cleanupOldEmails } from "@/lib/email-cleanup.functions";
 import { getMyPlan } from "@/lib/plan.functions";
 import {
+  getBillingSnapshot,
+  openBillingPortal,
+  startProCheckout,
+  type BillingSnapshot,
+} from "@/lib/billing.functions";
+import {
+  getMyChannelNotifyDiagnostics,
+} from "@/lib/channel-notify-diagnostics.functions";
+import type { ChannelNotifyDiagnostics } from "@/lib/channel-notify-diagnostics.server";
+import {
   createTelegramLink,
   getTelegramConnection,
   unlinkTelegram,
@@ -38,11 +48,17 @@ import {
   unlinkWhatsApp,
   updateWhatsAppPreferences,
 } from "@/lib/whatsapp.functions";
+import {
+  createKappelasLink,
+  getKappelasConnection,
+  unlinkKappelas,
+  updateKappelasPreferences,
+} from "@/lib/kappelas.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import type { UserPlan } from "@/lib/plan.server";
 
-const tabs = ["Comptes", "Préférences IA", "Listes", "Notifications", "Exports"] as const;
+const tabs = ["Comptes", "Abonnement", "Préférences IA", "Listes", "Notifications", "Exports"] as const;
 type Tab = (typeof tabs)[number];
 
 export function SettingsPage({ gmailStatus }: { gmailStatus?: string }) {
@@ -104,6 +120,7 @@ export function SettingsPage({ gmailStatus }: { gmailStatus?: string }) {
           aria-labelledby={`settings-tab-${tabs.indexOf(tab)}`}
         >
           {tab === "Comptes" && <AccountsTab />}
+          {tab === "Abonnement" && <BillingTab />}
           {tab === "Préférences IA" && <PreferencesTab />}
           {tab === "Listes" && <ListsTab />}
           {tab === "Notifications" && <NotificationsTab />}
@@ -363,7 +380,9 @@ function AccountsTab() {
           <p className="mt-3 text-xs text-muted-foreground">
             Plan {plan === "pro" ? "Pro" : "Free"} — {accounts.length}/{maxAccounts} compte
             {maxAccounts > 1 ? "s" : ""}
-            {atAccountLimit && plan === "free" ? " · Passez en Pro pour jusqu’à 5 comptes." : ""}
+            {atAccountLimit && plan === "free"
+              ? " · Ouvrez l’onglet Abonnement pour passer en Pro."
+              : ""}
           </p>
         </div>
       </Card>
@@ -594,10 +613,130 @@ function ListsTab() {
   );
 }
 
+function BillingTab() {
+  const loadBilling = useServerFn(getBillingSnapshot);
+  const checkout = useServerFn(startProCheckout);
+  const portal = useServerFn(openBillingPortal);
+  const [billing, setBilling] = useState<BillingSnapshot | null>(null);
+  const [pending, setPending] = useState<string | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("billing") === "success") {
+      toast.success("Abonnement Pro activé (ou en cours de confirmation Stripe).");
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadBilling()
+      .then(setBilling)
+      .catch(() => setBilling(null));
+  }, [loadBilling]);
+
+  async function goCheckout() {
+    setPending("checkout");
+    try {
+      const result = await checkout();
+      window.location.assign(result.url);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Checkout impossible");
+      setPending(null);
+    }
+  }
+
+  async function goPortal() {
+    setPending("portal");
+    try {
+      const result = await portal();
+      window.location.assign(result.url);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Portail impossible");
+      setPending(null);
+    }
+  }
+
+  if (!billing) {
+    return <p className="text-sm text-muted-foreground">Chargement de l’abonnement…</p>;
+  }
+
+  return (
+    <Card
+      title="Abonnement"
+      desc="Free ou Pro. L’upgrade Pro débloque 5 comptes, Telegram/WhatsApp et des quotas IA plus élevés."
+    >
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="rounded-full border border-border px-3 py-1 font-mono text-[11px] uppercase tracking-wider">
+            Plan {billing.plan === "pro" ? "Pro" : "Free"}
+          </span>
+          {billing.stripeSubscriptionStatus ? (
+            <span className="text-xs text-muted-foreground">
+              Stripe : {billing.stripeSubscriptionStatus}
+            </span>
+          ) : null}
+        </div>
+        <ul className="space-y-1 text-sm text-muted-foreground">
+          <li>
+            Comptes e-mail : jusqu’à {billing.maxEmailAccounts}
+          </li>
+          <li>
+            Analyses IA / jour : {billing.plan === "pro" ? "2 000" : "100"} (selon env)
+          </li>
+          <li>Canaux Telegram / WhatsApp : {billing.plan === "pro" ? "inclus" : "Pro uniquement"}</li>
+        </ul>
+        <div className="flex flex-wrap gap-3">
+          {billing.plan !== "pro" ? (
+            <button
+              type="button"
+              onClick={goCheckout}
+              disabled={!billing.stripeConfigured || pending === "checkout"}
+              className="inline-flex h-10 items-center justify-center rounded-xl bg-foreground px-4 text-sm font-semibold text-background disabled:opacity-50"
+            >
+              {pending === "checkout" ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                "Passer en Pro — 19€/mois"
+              )}
+            </button>
+          ) : null}
+          {billing.canManageBilling || billing.plan === "pro" ? (
+            <button
+              type="button"
+              onClick={goPortal}
+              disabled={!billing.stripeConfigured || pending === "portal"}
+              className="inline-flex h-10 items-center justify-center rounded-xl border border-border px-4 text-sm font-semibold disabled:opacity-50"
+            >
+              {pending === "portal" ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                "Gérer l’abonnement"
+              )}
+            </button>
+          ) : null}
+          <Link
+            to="/pricing"
+            className="inline-flex h-10 items-center justify-center rounded-xl border border-border px-4 text-sm font-semibold"
+          >
+            Voir les tarifs
+          </Link>
+        </div>
+        {!billing.stripeConfigured ? (
+          <p className="text-xs text-amber-600 dark:text-amber-400">
+            Stripe n’est pas encore configuré côté serveur (`STRIPE_SECRET_KEY`,
+            `STRIPE_PRICE_PRO`, `STRIPE_WEBHOOK_SECRET`).
+          </p>
+        ) : null}
+      </div>
+    </Card>
+  );
+}
+
 function NotificationsTab() {
   const { settings, loading, updateSettings } = useUserSettings();
   const loadPlan = useServerFn(getMyPlan);
+  const loadDiagnostics = useServerFn(getMyChannelNotifyDiagnostics);
   const [plan, setPlan] = useState<UserPlan>("free");
+  const [diagnostics, setDiagnostics] = useState<ChannelNotifyDiagnostics | null>(null);
 
   useEffect(() => {
     void loadPlan()
@@ -605,26 +744,53 @@ function NotificationsTab() {
       .catch(() => setPlan("free"));
   }, [loadPlan]);
 
+  useEffect(() => {
+    void loadDiagnostics()
+      .then(setDiagnostics)
+      .catch(() => setDiagnostics(null));
+  }, [loadDiagnostics, plan]);
+
   if (loading) return <p className="text-sm text-muted-foreground">Chargement…</p>;
   const isPro = plan === "pro";
   return (
     <>
+      {diagnostics?.blockers.length ? (
+        <Card
+          title="Diagnostic alertes"
+          desc="Pourquoi Telegram / WhatsApp / Kappelas peuvent rester silencieux."
+        >
+          <ul className="space-y-2 text-sm text-amber-700 dark:text-amber-300">
+            {diagnostics.blockers.map((blocker) => (
+              <li key={blocker}>• {blocker}</li>
+            ))}
+          </ul>
+          <p className="mt-3 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+            Plan {diagnostics.plan} · TG {diagnostics.telegram.linked ? "oui" : "non"} · WA{" "}
+            {diagnostics.whatsapp.linked ? "oui" : "non"} · Kappelas{" "}
+            {diagnostics.kappelas.linked ? "oui" : "non"} · bot TG{" "}
+            {diagnostics.telegramBotConfigured ? "ok" : "—"} · OpenWA{" "}
+            {diagnostics.openWaConfigured ? "ok" : "—"} · Kappelas SDK{" "}
+            {diagnostics.kappelasConfigured ? "ok" : "—"}
+          </p>
+        </Card>
+      ) : null}
       {isPro ? (
         <>
           <TelegramCard settings={settings} updateSettings={updateSettings} />
           <WhatsAppCard settings={settings} updateSettings={updateSettings} />
+          <KappelasCard settings={settings} updateSettings={updateSettings} />
         </>
       ) : (
         <Card
-          title="Telegram & WhatsApp — Pro"
-          desc="Les alertes, récaps et digests sur Telegram et WhatsApp sont réservés au plan Pro."
+          title="Canaux messagerie — Pro"
+          desc="Telegram, WhatsApp et Kappelas sont réservés au plan Pro."
         >
           <p className="text-sm text-muted-foreground">
-            Passez en Pro pour lier vos canaux de messagerie, recevoir les récaps après chaque
-            analyse et piloter MailMind par commandes.
+            Passez en Pro pour lier vos canaux, recevoir les récaps après chaque analyse et
+            piloter MailMind par commandes.
           </p>
           <p className="mt-4 inline-flex rounded-full border border-border px-3 py-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-            Plan actuel : Free
+            Plan actuel : Free — onglet Abonnement pour upgrader
           </p>
         </Card>
       )}
@@ -1122,6 +1288,203 @@ function WhatsAppCard({
           <p className="mt-4 text-xs text-muted-foreground">
             Commandes : /help, /status, /digest, /alerts et /unlink — ou le message « LIEN … » pour
             lier.
+          </p>
+        </>
+      )}
+    </Card>
+  );
+}
+
+function KappelasCard({
+  settings,
+  updateSettings,
+}: {
+  settings: UserSettings;
+  updateSettings: (patch: Partial<UserSettings>) => Promise<void>;
+}) {
+  const getConnection = useServerFn(getKappelasConnection);
+  const createLink = useServerFn(createKappelasLink);
+  const updatePreferences = useServerFn(updateKappelasPreferences);
+  const unlink = useServerFn(unlinkKappelas);
+  const [connection, setConnection] = useState<Awaited<ReturnType<typeof getConnection>> | null>(
+    null,
+  );
+  const [link, setLink] = useState<string | null>(null);
+  const [prefill, setPrefill] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    void getConnection()
+      .then(setConnection)
+      .catch(() => setConnection(null));
+  }, [getConnection]);
+
+  async function generateLink() {
+    setPending(true);
+    try {
+      const result = await createLink();
+      setLink(result.botLink);
+      setPrefill(result.prefill);
+      toast.success("Lien Kappelas généré pour 15 minutes.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Kappelas n'est pas disponible");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function changePreference(
+    field: "urgentAlerts" | "phishingAlerts" | "summaryAlerts" | "summaryDigest" | "commandAccess",
+    value: boolean,
+  ) {
+    try {
+      const next = await updatePreferences({ data: { [field]: value } });
+      setConnection(next);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Mise à jour impossible");
+    }
+  }
+
+  async function removeKappelas() {
+    if (!confirm("Retirer définitivement ce chat Kappelas de MailMind ?")) return;
+    setPending(true);
+    try {
+      await unlink();
+      setConnection(null);
+      setLink(null);
+      setPrefill(null);
+      toast.success("Kappelas a été déconnecté.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Déconnexion impossible");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  const isLinked = connection?.status === "linked";
+  return (
+    <Card
+      title="Kappelas"
+      desc="Recevez les alertes et récaps via le bot Kappelas (@kappelas/sdk)."
+    >
+      {!isLinked ? (
+        <>
+          <p className="text-sm text-muted-foreground">
+            Générez un lien, ouvrez le bot Kappelas, puis envoyez le message{" "}
+            <span className="font-mono text-xs">LIEN …</span> (ou{" "}
+            <span className="font-mono text-xs">/start …</span>). Expire après 15 minutes.
+          </p>
+          <button
+            type="button"
+            onClick={generateLink}
+            disabled={pending}
+            aria-busy={pending}
+            className="mt-4 inline-flex items-center gap-2 rounded-md bg-foreground px-4 py-2 text-sm font-semibold text-background disabled:opacity-50"
+          >
+            <Send className="size-4" />
+            {pending ? "Génération…" : "Lier Kappelas"}
+          </button>
+          {link && (
+            <div className="mt-4 space-y-2 rounded-lg border border-border bg-background p-3">
+              <a
+                href={link}
+                target="_blank"
+                rel="noreferrer"
+                className="break-all text-xs font-semibold text-primary hover:underline"
+              >
+                Ouvrir le bot Kappelas
+              </a>
+              {prefill ? (
+                <button
+                  type="button"
+                  onClick={() => void navigator.clipboard.writeText(prefill)}
+                  className="block text-xs text-muted-foreground hover:text-foreground"
+                >
+                  Copier le message LIEN
+                </button>
+              ) : null}
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-semibold">
+              Connecté
+              {connection.display_name
+                ? ` — ${connection.display_name}`
+                : connection.username
+                  ? ` — @${connection.username}`
+                  : ""}
+            </p>
+            <button
+              type="button"
+              onClick={() => void removeKappelas()}
+              disabled={pending}
+              aria-busy={pending}
+              className="text-xs font-semibold text-danger hover:underline disabled:opacity-50"
+            >
+              Déconnecter
+            </button>
+          </div>
+          <div className="mt-4 space-y-1">
+            <Toggle
+              label="Récap après chaque analyse"
+              on={connection.summary_alerts !== false}
+              onChange={(value) => void changePreference("summaryAlerts", value)}
+            />
+            <Toggle
+              label="Alertes urgentes"
+              on={connection.urgent_alerts}
+              onChange={(value) => void changePreference("urgentAlerts", value)}
+            />
+            <Toggle
+              label="Alertes phishing et sécurité"
+              on={connection.phishing_alerts}
+              onChange={(value) => void changePreference("phishingAlerts", value)}
+            />
+            <Toggle
+              label="Digest quotidien des résumés"
+              on={connection.summary_digest}
+              onChange={(value) => void changePreference("summaryDigest", value)}
+            />
+            <Toggle
+              label="Autoriser les commandes Kappelas"
+              on={connection.command_access}
+              onChange={(value) => void changePreference("commandAccess", value)}
+            />
+          </div>
+          <div className="mt-5 border-t border-border pt-5">
+            <p className="text-sm font-semibold">Digest Kappelas</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Heure locale d’envoi du récapitulatif quotidien.
+            </p>
+            <div className="mt-3 flex flex-col gap-3 sm:flex-row">
+              <label className="flex flex-1 flex-col gap-1 text-xs text-muted-foreground">
+                Heure
+                <input
+                  type="time"
+                  value={settings.kappelasDigestTime}
+                  onChange={(event) =>
+                    void updateSettings({ kappelasDigestTime: event.target.value })
+                  }
+                  className="h-10 rounded-md border border-border bg-background px-3 text-sm text-foreground"
+                />
+              </label>
+              <label className="flex flex-[2] flex-col gap-1 text-xs text-muted-foreground">
+                Fuseau horaire
+                <input
+                  type="text"
+                  value={settings.timezone}
+                  onChange={(event) => void updateSettings({ timezone: event.target.value })}
+                  placeholder="Europe/Paris"
+                  className="h-10 rounded-md border border-border bg-background px-3 text-sm text-foreground"
+                />
+              </label>
+            </div>
+          </div>
+          <p className="mt-4 text-xs text-muted-foreground">
+            Commandes : /help, /status, /digest, /alerts, /urgences, /archive, /draft, /unlink.
           </p>
         </>
       )}

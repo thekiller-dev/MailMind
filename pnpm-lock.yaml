@@ -11,6 +11,9 @@ importers:
       '@ai-sdk/openai-compatible':
         specifier: ^3.0.1
         version: 3.0.12(zod@4.4.3)
+      '@kappelas/sdk':
+        specifier: ^0.9.1
+        version: 0.9.1
       '@radix-ui/react-accordion':
         specifier: ^1.2.12
         version: 1.2.17(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -969,6 +972,10 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
+
+  '@kappelas/sdk@0.9.1':
+    resolution: {integrity: sha512-M01JEGVCk2sZ6JcoLkjYxuxeBiR3NkFK3tpBvdh14SZL+oDjHQKooPCnlF+kO7hNsVec0ivAWlTGga7YbrsSMA==}
+    engines: {node: '>=18'}
 
   '@mapbox/node-pre-gyp@2.0.3':
     resolution: {integrity: sha512-uwPAhccfFJlsfCxMYTwOdVfOz3xqyj8xYL3zJj8f0pb30tLohnnFPhLuqp4/qoEz8sNxe4SESZedcBojRefIzg==}
@@ -5554,6 +5561,13 @@ snapshots:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
+
+  '@kappelas/sdk@0.9.1':
+    dependencies:
+      ws: 8.21.1
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
 
   '@mapbox/node-pre-gyp@2.0.3(supports-color@7.2.0)':
     dependencies:

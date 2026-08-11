@@ -7,7 +7,7 @@ function timingSafeEqualStr(a: string, b: string): boolean {
   return ab.length === bb.length && timingSafeEqual(ab, bb);
 }
 
-async function handleCleanup(request: Request) {
+async function handleOpsHealth(request: Request) {
   const expected = process.env.CRON_SECRET;
   const provided =
     request.headers.get("x-cron-secret") ??
@@ -18,23 +18,28 @@ async function handleCleanup(request: Request) {
   }
 
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { runRetentionCleanup } = await import("@/lib/email-cleanup.server");
+  const { getGlobalOpsHealth, maybeSendOpsAlert } = await import("@/lib/sync-ops.server");
+  const health = await getGlobalOpsHealth(supabaseAdmin);
+  let alert: { sent: boolean } = { sent: false };
   try {
-    const result = await runRetentionCleanup(supabaseAdmin);
-    return Response.json({ ...result, ok: true });
+    alert = await maybeSendOpsAlert(health);
   } catch (error) {
-    return Response.json(
-      { ok: false, error: error instanceof Error ? error.message : "cleanup_failed" },
-      { status: 500 },
-    );
+    console.error("[ops-health] alert webhook failed", error);
   }
+
+  return Response.json({
+    ok: true,
+    ...health,
+    alertSent: alert.sent,
+    checkedAt: new Date().toISOString(),
+  });
 }
 
-export const Route = createFileRoute("/api/public/hooks/cleanup-emails")({
+export const Route = createFileRoute("/api/public/hooks/ops-health")({
   server: {
     handlers: {
-      GET: ({ request }) => handleCleanup(request),
-      POST: ({ request }) => handleCleanup(request),
+      GET: async ({ request }) => handleOpsHealth(request),
+      POST: async ({ request }) => handleOpsHealth(request),
     },
   },
 });

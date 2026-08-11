@@ -28,5 +28,19 @@ export default defineConfig({
     port: 5000,
     strictPort: true,
     allowedHosts: true,
+    watch: {
+      // Avoid ENOSPC when local worktrees / caches inflate the watch graph.
+      ignored: [
+        "**/.git/**",
+        "**/node_modules/**",
+        "**/.kilo/**",
+        "**/.corepack-home/**",
+        "**/.output/**",
+        "**/.nitro/**",
+        "**/.tanstack/**",
+        "**/playwright-report/**",
+        "**/test-results/**",
+      ],
+    },
   },
 });

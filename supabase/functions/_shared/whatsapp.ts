@@ -106,7 +106,19 @@ export async function notifyWhatsAppEmailAnalysis(
   email: EmailNotification,
 ) {
   const plan = await getUserPlan(supabase, userId);
-  if (plan !== "pro") return;
+  if (plan !== "pro") {
+    console.info(
+      JSON.stringify({
+        tag: "channel-notify",
+        channel: "whatsapp",
+        skip: "plan_not_pro",
+        userId,
+        plan,
+        emailId: email.id,
+      }),
+    );
+    return;
+  }
 
   const { data: connection } = await supabase
     .from("whatsapp_connections")

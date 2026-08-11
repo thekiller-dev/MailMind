@@ -1,5 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { deriveEmailAction, isSecurityAlert } from "./channel-notify-shared";
+import {
+  deriveEmailAction,
+  isSecurityAlert,
+  logChannelNotifySkip,
+} from "./channel-notify-shared";
 import { getUserPlan } from "./plan.server";
 
 function escapeTelegramHtml(value: string): string {
@@ -12,7 +16,10 @@ function escapeTelegramHtml(value: string): string {
 
 async function sendTelegramMessage(chatId: number, text: string) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
-  if (!token) return;
+  if (!token) {
+    logChannelNotifySkip("telegram", "missing_bot_token");
+    return;
+  }
   const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -71,7 +78,10 @@ export async function notifyEmailAnalysis(
   email: EmailNotification,
 ) {
   const plan = await getUserPlan(supabase, userId);
-  if (plan !== "pro") return;
+  if (plan !== "pro") {
+    logChannelNotifySkip("telegram", "plan_not_pro", { userId, plan, emailId: email.id });
+    return;
+  }
 
   const { data: connection } = await supabase
     .from("telegram_connections")
@@ -79,7 +89,10 @@ export async function notifyEmailAnalysis(
     .eq("user_id", userId)
     .eq("status", "linked")
     .maybeSingle();
-  if (!connection?.chat_id) return;
+  if (!connection?.chat_id) {
+    logChannelNotifySkip("telegram", "not_linked", { userId, emailId: email.id });
+    return;
+  }
 
   const chatId = Number(connection.chat_id);
   const isUrgent = email.category === "Urgent";

@@ -12,8 +12,11 @@ import { AppShell, EmptyState } from "@/components/AppShell";
 import { ProviderIcon } from "@/components/ProviderIcons";
 import { useAccounts, useEmails } from "@/lib/data-hooks";
 import { getDashboardStats, type DashboardStats } from "@/lib/dashboard-stats.functions";
+import { getMySyncHealth, retryMySync } from "@/lib/sync-ops.functions";
+import type { SyncHealthSnapshot } from "@/lib/sync-ops.server";
 import { useServerFn } from "@tanstack/react-start";
 import { lazy, Suspense, useEffect, useState } from "react";
+import { toast } from "sonner";
 
 const DashboardFlowChart = lazy(() =>
   import("@/components/dashboard/DashboardCharts").then((module) => ({
@@ -53,13 +56,36 @@ function Dashboard() {
   const { emails, loading } = useEmails();
   const { accounts } = useAccounts();
   const loadStats = useServerFn(getDashboardStats);
+  const loadSyncHealth = useServerFn(getMySyncHealth);
+  const retrySync = useServerFn(retryMySync);
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [syncHealth, setSyncHealth] = useState<SyncHealthSnapshot | null>(null);
+  const [retryingId, setRetryingId] = useState<string | null>(null);
 
   useEffect(() => {
     void loadStats()
       .then(setStats)
       .catch(() => setStats(null));
   }, [loadStats, emails.length]);
+
+  useEffect(() => {
+    void loadSyncHealth()
+      .then(setSyncHealth)
+      .catch(() => setSyncHealth(null));
+  }, [loadSyncHealth, accounts.length]);
+
+  async function handleRetry(accountId: string) {
+    setRetryingId(accountId);
+    try {
+      await retrySync({ data: { accountId } });
+      toast.success("Synchronisation relancée.");
+      setSyncHealth(await loadSyncHealth());
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Relance impossible");
+    } finally {
+      setRetryingId(null);
+    }
+  }
 
   const analyzed = stats?.analyzedTotal ?? emails.filter((e) => e.analyzed_at || e.summary).length;
   const urgent = stats?.urgentTotal ?? emails.filter((e) => e.category === "Urgent").length;
@@ -147,6 +173,67 @@ function Dashboard() {
             icon={Clock}
           />
         </div>
+
+        {syncHealth &&
+        (syncHealth.failedLast24h > 0 ||
+          syncHealth.partialLast24h > 0 ||
+          syncHealth.stuckPending > 0 ||
+          syncHealth.recent.length > 0) ? (
+          <div className="mt-6 rounded-3xl glass p-6 sm:p-8">
+            <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h2 className="font-display text-xl tracking-wide sm:text-2xl">
+                  Santé des synchronisations
+                </h2>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Échecs 24h : {syncHealth.failedLast24h} · Partiels : {syncHealth.partialLast24h} ·
+                  Bloqués : {syncHealth.stuckPending}
+                </p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              {syncHealth.recent
+                .filter((run) => run.status === "failed" || run.status === "partial")
+                .slice(0, 5)
+                .map((run) => (
+                  <div
+                    key={run.id}
+                    className="flex flex-wrap items-center gap-3 rounded-2xl glass-subtle p-3.5"
+                  >
+                    <span
+                      className={`rounded-full px-2 py-0.5 font-mono text-[10px] uppercase ${
+                        run.status === "failed"
+                          ? "bg-destructive/15 text-destructive"
+                          : "bg-amber-500/15 text-amber-700 dark:text-amber-300"
+                      }`}
+                    >
+                      {run.status}
+                    </span>
+                    <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+                      {run.error ?? "Sans détail"} ·{" "}
+                      {new Date(run.createdAt).toLocaleString("fr-FR")}
+                    </p>
+                    {run.status === "failed" ? (
+                      <button
+                        type="button"
+                        disabled={retryingId === run.accountId}
+                        onClick={() => void handleRetry(run.accountId)}
+                        className="rounded-full border border-border px-3 py-1 text-xs font-semibold disabled:opacity-50"
+                      >
+                        {retryingId === run.accountId ? "…" : "Relancer"}
+                      </button>
+                    ) : null}
+                  </div>
+                ))}
+              {syncHealth.recent.filter((run) => run.status === "failed" || run.status === "partial")
+                .length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Aucun échec récent. Dernières syncs OK : {syncHealth.successLast24h}.
+                </p>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
 
         <div className="mt-6 grid gap-4 sm:gap-6 lg:grid-cols-3">
           <div className="rounded-3xl glass p-6 sm:p-8 lg:col-span-2">

@@ -4,6 +4,12 @@ project_id = "udfkcqhuhqpunvlhgpdc"
 enabled = true
 schemas = ["public", "graphql_public", "pgmq_public"]
 
+# Password policy for local Auth. Production: also enable
+# "Prevent use of leaked passwords" (HIBP) in the Supabase Dashboard
+# (Auth → Providers → Email). That toggle is not fully versionable via CLI yet.
+[auth]
+minimum_password_length = 10
+
 [functions.resend-inbound]
 verify_jwt = false
 

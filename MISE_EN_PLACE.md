@@ -300,6 +300,48 @@ Digest : inclus dans le cron `telegram-digest` (Hobby), ou appel manuel de
 Pour le canal inbound Resend (edge), définir aussi `OPENWA_*` dans les secrets
 Supabase Functions.
 
+## 6quater. Configurer Kappelas
+
+MailMind utilise [`@kappelas/sdk`](https://www.npmjs.com/package/@kappelas/sdk) en mode **webhook** (pas de WebSocket sur Vercel).
+
+1. Créer un bot avec **BotMother** sur [kappelas.com](https://kappelas.com/bot/botmother_bot).
+2. Définir sur Vercel :
+   - `KAPPELAS_BOT_TOKEN`
+   - `KAPPELAS_BOT_USERNAME` (sans `@`)
+   - `KAPPELAS_WEBHOOK_SECRET` (secret aléatoire)
+3. Appliquer la migration `20260811120000_add_kappelas_integration.sql`.
+4. Enregistrer le webhook :
+
+```bash
+export KAPPELAS_BOT_TOKEN=...
+export KAPPELAS_WEBHOOK_SECRET=...
+export KAPPELAS_WEBHOOK_URL=https://www.mailmind.me/api/public/hooks/kappelas
+node scripts/register-kappelas-webhook.mjs
+node scripts/register-kappelas-webhook.mjs --verify
+```
+
+5. Dans MailMind (plan Pro) : Paramètres → Notifications → Kappelas → Lier.
+   L’utilisateur ouvre le bot et envoie `LIEN <token>` ou `/start <token>`.
+
+Alertes post-analyse : même pipeline que Telegram/WhatsApp (gate Pro).
+Digest quotidien : inclus dans le cron `telegram-digest`.
+
+## 6ter. Configurer Stripe (plan Pro)
+
+1. Créer un produit Stripe « MailMind Pro » avec un Price récurrent mensuel (19 €).
+2. Définir sur Vercel :
+   - `STRIPE_SECRET_KEY`
+   - `STRIPE_PRICE_PRO` (id `price_…`)
+   - `STRIPE_WEBHOOK_SECRET`
+3. Webhook Stripe vers `https://www.mailmind.me/api/public/hooks/stripe`
+   (événements : `checkout.session.completed`, `customer.subscription.updated`,
+   `customer.subscription.deleted`).
+4. Appliquer la migration `20260808090000_add_stripe_billing.sql`.
+5. Dans l’app : Paramètres → Abonnement → Passer en Pro.
+
+Sans ces variables, l’UI Pro reste visible mais le checkout renvoie une erreur
+explicite de configuration.
+
 ## 7. Synchronisation Gmail durable
 
 Le endpoint suivant est protege par `CRON_SECRET` (GET ou POST, compatible Vercel Cron) :
@@ -308,9 +350,9 @@ Le endpoint suivant est protege par `CRON_SECRET` (GET ou POST, compatible Verce
 /api/public/hooks/sync-emails
 ```
 
-Il enqueue les comptes à synchroniser dans `gmail_sync_jobs` (pgmq), puis traite un lot avec retries/backoff. La sync utilise Gmail History API quand un `history_id` est disponible, avec repli sur un scan borné.
+Il enqueue les comptes à synchroniser dans `gmail_sync_jobs` (pgmq), puis traite un lot avec retries/backoff. La sync utilise Gmail History API quand un `history_id` est disponible, avec repli sur un scan borné. Sur Hobby, ce même cron enchaîne aussi la rétention (`cleanup`) et le contrôle ops (`sync_runs` en échec + webhook `OPS_ALERT_WEBHOOK_URL` optionnel).
 
-Le fichier `vercel.json` demande une execution quotidienne a 03:00 UTC, compatible avec le plan Vercel Hobby. Une frequence plus elevee necessite Vercel Pro ou un ordonnanceur externe. Verifier que :
+Le fichier `vercel.json` demande une execution quotidienne a 03:00 UTC, compatible avec le plan Vercel Hobby (2 crons max). Une frequence plus elevee necessite Vercel Pro ou un ordonnanceur externe. Verifier que :
 
 - `CRON_SECRET` est defini dans l'environnement de production.
 - Le fournisseur de deployement active bien les cron jobs.

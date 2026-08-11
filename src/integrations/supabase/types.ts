@@ -501,6 +501,7 @@ export type Database = {
           settings: Json;
           telegram_digest_time: string;
           whatsapp_digest_time: string;
+          kappelas_digest_time: string;
           timezone: string;
           updated_at: string;
           user_id: string;
@@ -509,6 +510,7 @@ export type Database = {
           settings?: Json;
           telegram_digest_time?: string;
           whatsapp_digest_time?: string;
+          kappelas_digest_time?: string;
           timezone?: string;
           updated_at?: string;
           user_id: string;
@@ -517,9 +519,94 @@ export type Database = {
           settings?: Json;
           telegram_digest_time?: string;
           whatsapp_digest_time?: string;
+          kappelas_digest_time?: string;
           timezone?: string;
           updated_at?: string;
           user_id?: string;
+        };
+        Relationships: [];
+      };
+      kappelas_connections: {
+        Row: {
+          chat_id: number | null;
+          command_access: boolean;
+          created_at: string;
+          display_name: string | null;
+          id: string;
+          kappelas_user_id: string | null;
+          link_token_expires_at: string | null;
+          link_token_hash: string | null;
+          linked_at: string | null;
+          last_seen_at: string | null;
+          phishing_alerts: boolean;
+          status: string;
+          summary_alerts: boolean;
+          summary_digest: boolean;
+          updated_at: string;
+          urgent_alerts: boolean;
+          user_id: string;
+          username: string | null;
+        };
+        Insert: {
+          chat_id?: number | null;
+          command_access?: boolean;
+          created_at?: string;
+          display_name?: string | null;
+          id?: string;
+          kappelas_user_id?: string | null;
+          link_token_expires_at?: string | null;
+          link_token_hash?: string | null;
+          linked_at?: string | null;
+          last_seen_at?: string | null;
+          phishing_alerts?: boolean;
+          status?: string;
+          summary_alerts?: boolean;
+          summary_digest?: boolean;
+          updated_at?: string;
+          urgent_alerts?: boolean;
+          user_id: string;
+          username?: string | null;
+        };
+        Update: {
+          chat_id?: number | null;
+          command_access?: boolean;
+          created_at?: string;
+          display_name?: string | null;
+          id?: string;
+          kappelas_user_id?: string | null;
+          link_token_expires_at?: string | null;
+          link_token_hash?: string | null;
+          linked_at?: string | null;
+          last_seen_at?: string | null;
+          phishing_alerts?: boolean;
+          status?: string;
+          summary_alerts?: boolean;
+          summary_digest?: boolean;
+          updated_at?: string;
+          urgent_alerts?: boolean;
+          user_id?: string;
+          username?: string | null;
+        };
+        Relationships: [];
+      };
+      kappelas_delivery_events: {
+        Row: {
+          chat_id: number;
+          created_at: string;
+          event_id: string;
+          event_type: string;
+        };
+        Insert: {
+          chat_id: number;
+          created_at?: string;
+          event_id: string;
+          event_type: string;
+        };
+        Update: {
+          chat_id?: number;
+          created_at?: string;
+          event_id?: string;
+          event_type?: string;
         };
         Relationships: [];
       };
@@ -532,6 +619,9 @@ export type Database = {
           full_name: string | null;
           id: string;
           plan: string;
+          stripe_customer_id: string | null;
+          stripe_subscription_id: string | null;
+          stripe_subscription_status: string | null;
           updated_at: string;
         };
         Insert: {
@@ -542,6 +632,9 @@ export type Database = {
           full_name?: string | null;
           id: string;
           plan?: string;
+          stripe_customer_id?: string | null;
+          stripe_subscription_id?: string | null;
+          stripe_subscription_status?: string | null;
           updated_at?: string;
         };
         Update: {
@@ -552,7 +645,31 @@ export type Database = {
           full_name?: string | null;
           id?: string;
           plan?: string;
+          stripe_customer_id?: string | null;
+          stripe_subscription_id?: string | null;
+          stripe_subscription_status?: string | null;
           updated_at?: string;
+        };
+        Relationships: [];
+      };
+      stripe_webhook_events: {
+        Row: {
+          event_id: string;
+          event_type: string;
+          payload: Json;
+          processed_at: string;
+        };
+        Insert: {
+          event_id: string;
+          event_type: string;
+          payload?: Json;
+          processed_at?: string;
+        };
+        Update: {
+          event_id?: string;
+          event_type?: string;
+          payload?: Json;
+          processed_at?: string;
         };
         Relationships: [];
       };

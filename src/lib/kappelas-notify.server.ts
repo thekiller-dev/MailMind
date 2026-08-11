@@ -4,18 +4,18 @@ import {
   isSecurityAlert,
   logChannelNotifySkip,
 } from "./channel-notify-shared";
-import { sendOpenWaText } from "./openwa.server";
+import { sendKappelasText } from "./kappelas.server";
 import { getUserPlan } from "./plan.server";
 import type { EmailNotification } from "./telegram-notify.server";
 
 async function claimAndSend(
   supabase: SupabaseClient,
-  chatId: string,
+  chatId: number,
   eventType: string,
   eventId: string,
   text: string,
 ) {
-  const { error: claimError } = await supabase.from("whatsapp_delivery_events").insert({
+  const { error: claimError } = await supabase.from("kappelas_delivery_events").insert({
     event_id: eventId,
     chat_id: chatId,
     event_type: eventType,
@@ -26,36 +26,44 @@ async function claimAndSend(
   }
 
   try {
-    await sendOpenWaText(chatId, text);
+    await sendKappelasText(chatId, text);
   } catch (error) {
-    await supabase.from("whatsapp_delivery_events").delete().eq("event_id", eventId);
+    await supabase.from("kappelas_delivery_events").delete().eq("event_id", eventId);
     throw error;
   }
 }
 
 /** Récap + alertes urgentes / phishing après analyse (parité Telegram). */
-export async function notifyWhatsAppEmailAnalysis(
+export async function notifyKappelasEmailAnalysis(
   supabase: SupabaseClient,
   userId: string,
   email: EmailNotification,
 ) {
   const plan = await getUserPlan(supabase, userId);
   if (plan !== "pro") {
-    logChannelNotifySkip("whatsapp", "plan_not_pro", { userId, plan, emailId: email.id });
+    logChannelNotifySkip("kappelas", "plan_not_pro", {
+      userId,
+      plan,
+      emailId: email.id,
+    });
     return;
   }
 
   const { data: connection } = await supabase
-    .from("whatsapp_connections")
+    .from("kappelas_connections")
     .select("chat_id,urgent_alerts,phishing_alerts,summary_alerts,status")
     .eq("user_id", userId)
     .eq("status", "linked")
     .maybeSingle();
-  if (!connection?.chat_id) {
-    logChannelNotifySkip("whatsapp", "not_linked", { userId, emailId: email.id });
+  if (connection?.chat_id == null) {
+    logChannelNotifySkip("kappelas", "not_linked", {
+      userId,
+      emailId: email.id,
+    });
     return;
   }
 
+  const chatId = Number(connection.chat_id);
   const isUrgent = email.category === "Urgent";
   const security = isSecurityAlert(email);
   const action = deriveEmailAction(email);
@@ -79,13 +87,7 @@ export async function notifyWhatsAppEmailAnalysis(
       .filter(Boolean)
       .join("\n");
 
-    await claimAndSend(
-      supabase,
-      connection.chat_id,
-      "recap",
-      `email:${email.id}:recap`,
-      recapText,
-    );
+    await claimAndSend(supabase, chatId, "recap", `email:${email.id}:recap`, recapText);
   }
 
   if (isUrgent && connection.urgent_alerts) {
@@ -99,13 +101,7 @@ export async function notifyWhatsAppEmailAnalysis(
     ]
       .filter(Boolean)
       .join("\n");
-    await claimAndSend(
-      supabase,
-      connection.chat_id,
-      "urgent",
-      `email:${email.id}:urgent`,
-      text,
-    );
+    await claimAndSend(supabase, chatId, "urgent", `email:${email.id}:urgent`, text);
   }
 
   if (security && connection.phishing_alerts) {
@@ -119,12 +115,6 @@ export async function notifyWhatsAppEmailAnalysis(
     ]
       .filter(Boolean)
       .join("\n");
-    await claimAndSend(
-      supabase,
-      connection.chat_id,
-      "phishing",
-      `email:${email.id}:phishing`,
-      text,
-    );
+    await claimAndSend(supabase, chatId, "phishing", `email:${email.id}:phishing`, text);
   }
 }

@@ -2,9 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { timingSafeEqual } from "node:crypto";
 
 // Cron endpoint. Syncs every Google account whose last sync is older than 10 minutes.
-// Auth: a dedicated CRON_SECRET (NOT the public publishable key, which ships to
-// the client and would let anyone trigger syncs). Send it as `x-cron-secret`
-// or `Authorization: Bearer <secret>`.
+// Also runs retention cleanup + ops health (Hobby plan allows only 2 Vercel crons).
+// Auth: CRON_SECRET via `x-cron-secret` or `Authorization: Bearer <secret>`.
 function timingSafeEqualStr(a: string, b: string): boolean {
   const ab = Buffer.from(a);
   const bb = Buffer.from(b);
@@ -50,7 +49,42 @@ async function handleSync(request: Request) {
   }
 
   const processed = await processGmailSyncQueue(supabaseAdmin, 10);
-  return Response.json({ enqueued, ok: true, processed });
+
+  let cleanup: { usersProcessed: number; deletedTotal: number } | { error: string } | null =
+    null;
+  try {
+    const { runRetentionCleanup } = await import("@/lib/email-cleanup.server");
+    cleanup = await runRetentionCleanup(supabaseAdmin);
+  } catch (cleanupError) {
+    cleanup = {
+      error: cleanupError instanceof Error ? cleanupError.message : "cleanup_failed",
+    };
+  }
+
+  let ops:
+    | {
+        failedLast24h: number;
+        stuckPending: number;
+        sampleErrors: string[];
+        alertSent: boolean;
+      }
+    | { error: string }
+    | null = null;
+  try {
+    const { getGlobalOpsHealth, maybeSendOpsAlert } = await import("@/lib/sync-ops.server");
+    const health = await getGlobalOpsHealth(supabaseAdmin);
+    let alertSent = false;
+    try {
+      alertSent = (await maybeSendOpsAlert(health)).sent;
+    } catch (alertError) {
+      console.error("[sync-emails] ops alert failed", alertError);
+    }
+    ops = { ...health, alertSent };
+  } catch (opsError) {
+    ops = { error: opsError instanceof Error ? opsError.message : "ops_failed" };
+  }
+
+  return Response.json({ enqueued, ok: true, processed, cleanup, ops });
 }
 
 export const Route = createFileRoute("/api/public/hooks/sync-emails")({

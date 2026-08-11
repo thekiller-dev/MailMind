@@ -33,7 +33,7 @@ export async function assertProMessaging(
   const plan = await getUserPlan(supabase, userId);
   if (plan !== "pro") {
     throw new PlanRestrictionError(
-      "Telegram et WhatsApp sont réservés au plan Pro.",
+      "Telegram, WhatsApp et Kappelas sont réservés au plan Pro.",
     );
   }
   return plan;

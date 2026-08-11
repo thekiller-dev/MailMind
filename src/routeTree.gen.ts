@@ -25,7 +25,10 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as ApiGmailCallbackRouteImport } from './routes/api/gmail/callback'
 import { Route as ApiPublicHooksCleanupEmailsRouteImport } from './routes/api/public/hooks/cleanup-emails'
+import { Route as ApiPublicHooksKappelasRouteImport } from './routes/api/public/hooks/kappelas'
+import { Route as ApiPublicHooksOpsHealthRouteImport } from './routes/api/public/hooks/ops-health'
 import { Route as ApiPublicHooksRiscRouteImport } from './routes/api/public/hooks/risc'
+import { Route as ApiPublicHooksStripeRouteImport } from './routes/api/public/hooks/stripe'
 import { Route as ApiPublicHooksSyncEmailsRouteImport } from './routes/api/public/hooks/sync-emails'
 import { Route as ApiPublicHooksTelegramDigestRouteImport } from './routes/api/public/hooks/telegram-digest'
 import { Route as ApiPublicHooksWhatsappRouteImport } from './routes/api/public/hooks/whatsapp'
@@ -112,9 +115,24 @@ const ApiPublicHooksCleanupEmailsRoute =
     path: '/api/public/hooks/cleanup-emails',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksKappelasRoute = ApiPublicHooksKappelasRouteImport.update({
+  id: '/api/public/hooks/kappelas',
+  path: '/api/public/hooks/kappelas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicHooksOpsHealthRoute = ApiPublicHooksOpsHealthRouteImport.update({
+  id: '/api/public/hooks/ops-health',
+  path: '/api/public/hooks/ops-health',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHooksRiscRoute = ApiPublicHooksRiscRouteImport.update({
   id: '/api/public/hooks/risc',
   path: '/api/public/hooks/risc',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicHooksStripeRoute = ApiPublicHooksStripeRouteImport.update({
+  id: '/api/public/hooks/stripe',
+  path: '/api/public/hooks/stripe',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicHooksSyncEmailsRoute =
@@ -158,7 +176,10 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/api/gmail/callback': typeof ApiGmailCallbackRoute
   '/api/public/hooks/cleanup-emails': typeof ApiPublicHooksCleanupEmailsRoute
+  '/api/public/hooks/kappelas': typeof ApiPublicHooksKappelasRoute
+  '/api/public/hooks/ops-health': typeof ApiPublicHooksOpsHealthRoute
   '/api/public/hooks/risc': typeof ApiPublicHooksRiscRoute
+  '/api/public/hooks/stripe': typeof ApiPublicHooksStripeRoute
   '/api/public/hooks/sync-emails': typeof ApiPublicHooksSyncEmailsRoute
   '/api/public/hooks/telegram-digest': typeof ApiPublicHooksTelegramDigestRoute
   '/api/public/hooks/whatsapp': typeof ApiPublicHooksWhatsappRoute
@@ -181,7 +202,10 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/api/gmail/callback': typeof ApiGmailCallbackRoute
   '/api/public/hooks/cleanup-emails': typeof ApiPublicHooksCleanupEmailsRoute
+  '/api/public/hooks/kappelas': typeof ApiPublicHooksKappelasRoute
+  '/api/public/hooks/ops-health': typeof ApiPublicHooksOpsHealthRoute
   '/api/public/hooks/risc': typeof ApiPublicHooksRiscRoute
+  '/api/public/hooks/stripe': typeof ApiPublicHooksStripeRoute
   '/api/public/hooks/sync-emails': typeof ApiPublicHooksSyncEmailsRoute
   '/api/public/hooks/telegram-digest': typeof ApiPublicHooksTelegramDigestRoute
   '/api/public/hooks/whatsapp': typeof ApiPublicHooksWhatsappRoute
@@ -205,7 +229,10 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/api/gmail/callback': typeof ApiGmailCallbackRoute
   '/api/public/hooks/cleanup-emails': typeof ApiPublicHooksCleanupEmailsRoute
+  '/api/public/hooks/kappelas': typeof ApiPublicHooksKappelasRoute
+  '/api/public/hooks/ops-health': typeof ApiPublicHooksOpsHealthRoute
   '/api/public/hooks/risc': typeof ApiPublicHooksRiscRoute
+  '/api/public/hooks/stripe': typeof ApiPublicHooksStripeRoute
   '/api/public/hooks/sync-emails': typeof ApiPublicHooksSyncEmailsRoute
   '/api/public/hooks/telegram-digest': typeof ApiPublicHooksTelegramDigestRoute
   '/api/public/hooks/whatsapp': typeof ApiPublicHooksWhatsappRoute
@@ -230,7 +257,10 @@ export interface FileRouteTypes {
     | '/terms'
     | '/api/gmail/callback'
     | '/api/public/hooks/cleanup-emails'
+    | '/api/public/hooks/kappelas'
+    | '/api/public/hooks/ops-health'
     | '/api/public/hooks/risc'
+    | '/api/public/hooks/stripe'
     | '/api/public/hooks/sync-emails'
     | '/api/public/hooks/telegram-digest'
     | '/api/public/hooks/whatsapp'
@@ -253,7 +283,10 @@ export interface FileRouteTypes {
     | '/terms'
     | '/api/gmail/callback'
     | '/api/public/hooks/cleanup-emails'
+    | '/api/public/hooks/kappelas'
+    | '/api/public/hooks/ops-health'
     | '/api/public/hooks/risc'
+    | '/api/public/hooks/stripe'
     | '/api/public/hooks/sync-emails'
     | '/api/public/hooks/telegram-digest'
     | '/api/public/hooks/whatsapp'
@@ -276,7 +309,10 @@ export interface FileRouteTypes {
     | '/terms'
     | '/api/gmail/callback'
     | '/api/public/hooks/cleanup-emails'
+    | '/api/public/hooks/kappelas'
+    | '/api/public/hooks/ops-health'
     | '/api/public/hooks/risc'
+    | '/api/public/hooks/stripe'
     | '/api/public/hooks/sync-emails'
     | '/api/public/hooks/telegram-digest'
     | '/api/public/hooks/whatsapp'
@@ -300,7 +336,10 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   ApiGmailCallbackRoute: typeof ApiGmailCallbackRoute
   ApiPublicHooksCleanupEmailsRoute: typeof ApiPublicHooksCleanupEmailsRoute
+  ApiPublicHooksKappelasRoute: typeof ApiPublicHooksKappelasRoute
+  ApiPublicHooksOpsHealthRoute: typeof ApiPublicHooksOpsHealthRoute
   ApiPublicHooksRiscRoute: typeof ApiPublicHooksRiscRoute
+  ApiPublicHooksStripeRoute: typeof ApiPublicHooksStripeRoute
   ApiPublicHooksSyncEmailsRoute: typeof ApiPublicHooksSyncEmailsRoute
   ApiPublicHooksTelegramDigestRoute: typeof ApiPublicHooksTelegramDigestRoute
   ApiPublicHooksWhatsappRoute: typeof ApiPublicHooksWhatsappRoute
@@ -421,11 +460,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksCleanupEmailsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/kappelas': {
+      id: '/api/public/hooks/kappelas'
+      path: '/api/public/hooks/kappelas'
+      fullPath: '/api/public/hooks/kappelas'
+      preLoaderRoute: typeof ApiPublicHooksKappelasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/ops-health': {
+      id: '/api/public/hooks/ops-health'
+      path: '/api/public/hooks/ops-health'
+      fullPath: '/api/public/hooks/ops-health'
+      preLoaderRoute: typeof ApiPublicHooksOpsHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/risc': {
       id: '/api/public/hooks/risc'
       path: '/api/public/hooks/risc'
       fullPath: '/api/public/hooks/risc'
       preLoaderRoute: typeof ApiPublicHooksRiscRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/stripe': {
+      id: '/api/public/hooks/stripe'
+      path: '/api/public/hooks/stripe'
+      fullPath: '/api/public/hooks/stripe'
+      preLoaderRoute: typeof ApiPublicHooksStripeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/hooks/sync-emails': {
@@ -476,7 +536,10 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   ApiGmailCallbackRoute: ApiGmailCallbackRoute,
   ApiPublicHooksCleanupEmailsRoute: ApiPublicHooksCleanupEmailsRoute,
+  ApiPublicHooksKappelasRoute: ApiPublicHooksKappelasRoute,
+  ApiPublicHooksOpsHealthRoute: ApiPublicHooksOpsHealthRoute,
   ApiPublicHooksRiscRoute: ApiPublicHooksRiscRoute,
+  ApiPublicHooksStripeRoute: ApiPublicHooksStripeRoute,
   ApiPublicHooksSyncEmailsRoute: ApiPublicHooksSyncEmailsRoute,
   ApiPublicHooksTelegramDigestRoute: ApiPublicHooksTelegramDigestRoute,
   ApiPublicHooksWhatsappRoute: ApiPublicHooksWhatsappRoute,

@@ -130,12 +130,18 @@ pnpm test:e2e
 
 Déjà en place côté fondations : `sync_runs`, `email_actions`, `usage_events`, queue `gmail_sync_jobs` (pgmq) et sync incrémentale History API.
 
-Avant une mise en production complète, ajouter encore :
+Briques récemment ajoutées :
 
-- Une vraie stratégie de rétention et suppression par compte.
-- Des tests d'intégration contre Supabase staging.
-- Des tests contractuels avec les réponses Gmail simulées.
-- Un monitoring opérationnel des `sync_runs` en échec et des quotas IA.
+- Billing Stripe (Checkout + Portal + webhook) branché sur `profiles.plan`.
+- Monitoring `sync_runs` (dashboard utilisateur + alerte ops via cron sync).
+- Rétention exécutée dans le cron quotidien `sync-emails` (Hobby : 2 crons max).
+- Tests contractuels Gmail (history, refresh, backoff queue) et signature Stripe.
+
+Reste opérationnel hors code :
+
+- Créer le Price Stripe Pro et renseigner `STRIPE_*` sur Vercel.
+- Activer HIBP (leaked passwords) dans le Dashboard Supabase (plan Pro).
+- Régénérer tout secret historiquement exposé.
 
 ## Règles de sécurité non négociables
 

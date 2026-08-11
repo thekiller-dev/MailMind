@@ -14,10 +14,12 @@
     "format": "prettier --write .",
     "test": "vitest run --pool=threads --maxWorkers=2",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "check:secrets": "node scripts/check-secrets.mjs"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^3.0.1",
+    "@kappelas/sdk": "^0.9.1",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-aspect-ratio": "^1.1.8",

@@ -46,6 +46,7 @@ export interface UserSettings {
   quietEnd: string;
   telegramDigestTime: string;
   whatsappDigestTime: string;
+  kappelasDigestTime: string;
   timezone: string;
   /** null ou 0 = désactivé ; 5 = purge auto après 5 jours */
   autoCleanupAfterDays: number | null;

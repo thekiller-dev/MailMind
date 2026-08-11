@@ -8,15 +8,25 @@ import {
 import { getUserPlan } from "./plan.server";
 import { formatDigest60Seconds } from "./product-insights";
 
-type DigestChannel = "telegram" | "whatsapp";
+type DigestChannel = "telegram" | "whatsapp" | "kappelas";
 
 async function loadDigestContext(
   supabase: SupabaseClient,
   channel: DigestChannel,
   now: Date,
 ) {
-  const table = channel === "telegram" ? "telegram_connections" : "whatsapp_connections";
-  const timeColumn = channel === "telegram" ? "telegram_digest_time" : "whatsapp_digest_time";
+  const table =
+    channel === "telegram"
+      ? "telegram_connections"
+      : channel === "whatsapp"
+        ? "whatsapp_connections"
+        : "kappelas_connections";
+  const timeColumn =
+    channel === "telegram"
+      ? "telegram_digest_time"
+      : channel === "whatsapp"
+        ? "whatsapp_digest_time"
+        : "kappelas_digest_time";
 
   const { data: connections, error: connectionError } = await supabase
     .from(table)
@@ -180,6 +190,55 @@ export async function runWhatsAppDigests(supabase: SupabaseClient, now = new Dat
     await supabase.from("whatsapp_delivery_events").insert({
       event_id: eventId,
       chat_id: connection.chat_id,
+      event_type: "digest",
+    });
+    sent += 1;
+  }
+
+  return { sent };
+}
+
+export async function runKappelasDigests(supabase: SupabaseClient, now = new Date()) {
+  const { sendKappelasText } = await import("./kappelas.server");
+  const { connections, settingsByUser, analyzedByUser } = await loadDigestContext(
+    supabase,
+    "kappelas",
+    now,
+  );
+  let sent = 0;
+
+  for (const connection of connections) {
+    if (connection.chat_id == null) continue;
+    const plan = await getUserPlan(supabase, connection.user_id);
+    if (plan !== "pro") continue;
+
+    const settings = settingsByUser.get(connection.user_id) ?? {
+      time: "18:00",
+      timezone: "UTC",
+    };
+    const localDate = isDigestDueOrCatchUp(settings.time, settings.timezone, now);
+    if (!localDate) continue;
+
+    const eventId = digestEventId("kappelas", localDate, connection.user_id);
+    const { data: alreadySent } = await supabase
+      .from("kappelas_delivery_events")
+      .select("event_id")
+      .eq("event_id", eventId)
+      .maybeSingle();
+    if (alreadySent) continue;
+
+    const emails = await fetchDayEmails(supabase, connection.user_id, settings.timezone, now);
+    if (!emails.length) continue;
+
+    const text = formatDigest60Seconds({
+      emails,
+      analyzedCount: analyzedByUser.get(connection.user_id) ?? emails.length,
+      markup: "md",
+    });
+    await sendKappelasText(Number(connection.chat_id), text);
+    await supabase.from("kappelas_delivery_events").insert({
+      event_id: eventId,
+      chat_id: Number(connection.chat_id),
       event_type: "digest",
     });
     sent += 1;
