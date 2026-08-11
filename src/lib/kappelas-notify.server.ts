@@ -29,6 +29,12 @@ async function claimAndSend(
     await sendKappelasText(chatId, text);
   } catch (error) {
     await supabase.from("kappelas_delivery_events").delete().eq("event_id", eventId);
+    console.error("[kappelas] notify send failed", {
+      chatId,
+      eventType,
+      eventId,
+      error: error instanceof Error ? error.message : String(error),
+    });
     throw error;
   }
 }

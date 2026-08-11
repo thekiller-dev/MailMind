@@ -2,6 +2,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { Webhook } from "npm:svix";
 import { notifyEmailAnalysis } from "../_shared/telegram.ts";
 import { notifyWhatsAppEmailAnalysis } from "../_shared/whatsapp.ts";
+import { notifyKappelasEmailAnalysis } from "../_shared/kappelas.ts";
 
 type ResendEvent = {
   type: string;
@@ -289,6 +290,11 @@ Deno.serve(async (request) => {
             await notifyWhatsAppEmailAnalysis(supabase, account.user_id, notification);
           } catch (notificationError) {
             console.error("whatsapp notification failed", notificationError);
+          }
+          try {
+            await notifyKappelasEmailAnalysis(supabase, account.user_id, notification);
+          } catch (notificationError) {
+            console.error("kappelas notification failed", notificationError);
           }
         }
       } catch (error) {

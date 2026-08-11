@@ -77,10 +77,18 @@ export function verifyKappelasWebhookSecret(header: string | null): boolean {
 
 export async function sendKappelasText(chatId: number, text: string): Promise<void> {
   const bot = createKappelasBot();
-  await bot.messages.send({
-    chat_id: chatId,
-    text: text.slice(0, 3900),
-  });
+  try {
+    await bot.messages.send({
+      chat_id: chatId,
+      text: text.slice(0, 3900),
+    });
+  } catch (error) {
+    const detail =
+      error instanceof Error
+        ? `${error.name}: ${error.message}`
+        : String(error);
+    throw new Error(`Kappelas send failed (chat_id=${chatId}): ${detail}`);
+  }
 }
 
 /** Optional HMAC helper if Kappela later signs bodies; currently secret is header-only. */
