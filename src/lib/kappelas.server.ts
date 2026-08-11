@@ -24,13 +24,55 @@ export function createKappelasBot(): KappelaBot {
   return new KappelaBot({ token });
 }
 
+function secretsEqual(provided: string | null | undefined, expected: string): boolean {
+  if (!provided) return false;
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
+/**
+ * Kappelas docs say the shared secret is sent as `X-Webhook-Secret`.
+ * In practice deliveries sometimes omit that header, so we also accept
+ * `Authorization: Bearer <secret>` and `?secret=` / `?token=` query params.
+ */
+export function verifyKappelasWebhookRequest(request: Request): boolean {
+  const expected = process.env.KAPPELAS_WEBHOOK_SECRET?.trim();
+  if (!expected) return false;
+
+  const headerCandidates = [
+    request.headers.get("x-webhook-secret"),
+    request.headers.get("webhook-secret"),
+    request.headers.get("x-kappelas-secret"),
+  ];
+  if (headerCandidates.some((value) => secretsEqual(value, expected))) return true;
+
+  const auth = request.headers.get("authorization")?.trim();
+  if (auth) {
+    const bearer = /^Bearer\s+(.+)$/i.exec(auth)?.[1]?.trim();
+    if (secretsEqual(bearer, expected) || secretsEqual(auth, expected)) return true;
+  }
+
+  try {
+    const url = new URL(request.url);
+    if (
+      secretsEqual(url.searchParams.get("secret"), expected) ||
+      secretsEqual(url.searchParams.get("token"), expected)
+    ) {
+      return true;
+    }
+  } catch {
+    // ignore malformed URL
+  }
+
+  return false;
+}
+
+/** @deprecated Prefer verifyKappelasWebhookRequest */
 export function verifyKappelasWebhookSecret(header: string | null): boolean {
   const expected = process.env.KAPPELAS_WEBHOOK_SECRET?.trim();
   if (!expected) return false;
-  if (!header) return false;
-  const a = Buffer.from(header);
-  const b = Buffer.from(expected);
-  return a.length === b.length && timingSafeEqual(a, b);
+  return secretsEqual(header, expected);
 }
 
 export async function sendKappelasText(chatId: number, text: string): Promise<void> {

@@ -5,18 +5,23 @@ export const Route = createFileRoute("/api/public/hooks/kappelas")({
     handlers: {
       POST: async ({ request }) => {
         try {
-          const { verifyKappelasWebhookSecret, isKappelasConfigured } =
+          const { verifyKappelasWebhookRequest, isKappelasConfigured } =
             await import("@/lib/kappelas.server");
           if (!isKappelasConfigured()) {
             return Response.json({ ok: false, error: "not_configured" }, { status: 503 });
           }
-          const webhookSecretHeader =
-            request.headers.get("x-webhook-secret") ??
-            request.headers.get("X-Webhook-Secret");
-          if (!verifyKappelasWebhookSecret(webhookSecretHeader)) {
+          if (!verifyKappelasWebhookRequest(request)) {
             console.warn("[kappelas] webhook unauthorized", {
               hasEnvSecret: Boolean(process.env.KAPPELAS_WEBHOOK_SECRET?.trim()),
-              hasHeader: Boolean(webhookSecretHeader?.trim()),
+              headerNames: [...request.headers.keys()],
+              hasQuerySecret: (() => {
+                try {
+                  const url = new URL(request.url);
+                  return url.searchParams.has("secret") || url.searchParams.has("token");
+                } catch {
+                  return false;
+                }
+              })(),
             });
             return Response.json({ ok: false, error: "unauthorized" }, { status: 401 });
           }
