@@ -118,6 +118,9 @@ function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="fr" suppressHydrationWarning>
       <head>
+        {/* Early tags so crawlers always see viewport even if head() is delayed */}
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
         <HeadContent />
       </head>
       <body>

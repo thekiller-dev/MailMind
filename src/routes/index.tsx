@@ -8,13 +8,16 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "MailMind est un assistant intelligent pour Gmail qui résume les e-mails, classe les messages, détecte les risques et extrait les actions à traiter.",
+          "MailMind résume, classe et sécurise vos e-mails Gmail. Détection phishing, actions à traiter, alertes — démarrez gratuitement.",
       },
       { property: "og:title", content: "MailMind — Assistant intelligent pour Gmail" },
       {
         property: "og:description",
-        content: "Filtrez le bruit. Identifiez les menaces. Extrayez les actions.",
+        content:
+          "Filtrez le bruit, détectez les menaces et extrayez les actions. Assistant Gmail avec IA.",
       },
+      { property: "og:url", content: "https://www.mailmind.me/" },
+      { name: "robots", content: "index,follow" },
     ],
   }),
   component: LandingPage,
