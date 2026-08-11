@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  formatDigest60Seconds,
-  shortEmailRef,
-  shouldSilenceRecap,
-} from "./product-insights";
+import { formatDigest60Seconds, shortEmailRef, shouldSilenceRecap } from "./product-insights";
 
 describe("shouldSilenceRecap", () => {
   it("ne coupe rien si smartSilence est désactivé", () => {

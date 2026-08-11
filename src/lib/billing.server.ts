@@ -15,9 +15,7 @@ export class BillingConfigError extends Error {
 }
 
 export function isStripeConfigured(): boolean {
-  return Boolean(
-    process.env.STRIPE_SECRET_KEY?.trim() && process.env.STRIPE_PRICE_PRO?.trim(),
-  );
+  return Boolean(process.env.STRIPE_SECRET_KEY?.trim() && process.env.STRIPE_PRICE_PRO?.trim());
 }
 
 function requireStripeSecret(): string {
@@ -92,9 +90,7 @@ export function verifyStripeWebhookSignature(
     throw new Error("Stripe webhook timestamp outside tolerance");
   }
 
-  const expected = createHmac("sha256", secret)
-    .update(`${timestamp}.${rawBody}`)
-    .digest("hex");
+  const expected = createHmac("sha256", secret).update(`${timestamp}.${rawBody}`).digest("hex");
   const a = Buffer.from(expected, "utf8");
   const b = Buffer.from(v1, "utf8");
   if (a.length !== b.length || !timingSafeEqual(a, b)) {
@@ -259,13 +255,8 @@ export async function handleStripeWebhookEvent(
   const obj = input.dataObject;
   const userId = await resolveUserIdFromStripeObject(supabase, obj);
 
-  if (
-    input.type === "checkout.session.completed" &&
-    obj.mode === "subscription" &&
-    userId
-  ) {
-    const subscriptionId =
-      typeof obj.subscription === "string" ? obj.subscription : null;
+  if (input.type === "checkout.session.completed" && obj.mode === "subscription" && userId) {
+    const subscriptionId = typeof obj.subscription === "string" ? obj.subscription : null;
     const customerId = typeof obj.customer === "string" ? obj.customer : null;
     const plan = await applySubscriptionToProfile(supabase, {
       userId,

@@ -1,9 +1,6 @@
 import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import {
-  planFromSubscriptionStatus,
-  verifyStripeWebhookSignature,
-} from "./billing.server";
+import { planFromSubscriptionStatus, verifyStripeWebhookSignature } from "./billing.server";
 
 describe("billing helpers", () => {
   it("maps Stripe subscription statuses to Free/Pro", () => {
@@ -23,11 +20,7 @@ describe("billing helpers", () => {
     });
     const timestamp = Math.floor(Date.now() / 1000).toString();
     const v1 = createHmac("sha256", secret).update(`${timestamp}.${payload}`).digest("hex");
-    const verified = verifyStripeWebhookSignature(
-      payload,
-      `t=${timestamp},v1=${v1}`,
-      secret,
-    );
+    const verified = verifyStripeWebhookSignature(payload, `t=${timestamp},v1=${v1}`, secret);
     expect(verified.eventId).toBe("evt_123");
     expect(verified.type).toBe("checkout.session.completed");
   });

@@ -1,9 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import {
-  deriveEmailAction,
-  isSecurityAlert,
-  logChannelNotifySkip,
-} from "./channel-notify-shared";
+import { deriveEmailAction, isSecurityAlert, logChannelNotifySkip } from "./channel-notify-shared";
 import { getUserPlan } from "./plan.server";
 
 function escapeTelegramHtml(value: string): string {
@@ -99,11 +95,7 @@ export async function notifyEmailAnalysis(
   const security = isSecurityAlert(email);
   const action = deriveEmailAction(email);
   const priorityPrefix =
-    isUrgent || security
-      ? isUrgent
-        ? "⚡ Prioritaire — "
-        : "🛡 Sécurité — "
-      : "";
+    isUrgent || security ? (isUrgent ? "⚡ Prioritaire — " : "🛡 Sécurité — ") : "";
 
   if (connection.summary_alerts !== false) {
     const recapText = [

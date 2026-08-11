@@ -116,7 +116,8 @@ export async function runChannelAction(
         },
         { supabase, userId, emailId: email.id, source: "rpc" },
       );
-      if (!draft) return "Brouillon indisponible pour l’instant. Réessaie ou utilise l’app MailMind.";
+      if (!draft)
+        return "Brouillon indisponible pour l’instant. Réessaie ou utilise l’app MailMind.";
       return [
         `Brouillon pour : ${email.subject || "(sans objet)"}`,
         `Réf : ${shortEmailRef(email.id)}`,

@@ -161,9 +161,7 @@ export async function maybeSendOpsAlert(payload: {
     `MailMind ops alert`,
     `failed_24h=${payload.failedLast24h}`,
     `stuck_pending=${payload.stuckPending}`,
-    payload.sampleErrors.length
-      ? `errors=${payload.sampleErrors.join(" | ")}`
-      : "errors=none",
+    payload.sampleErrors.length ? `errors=${payload.sampleErrors.join(" | ")}` : "errors=none",
   ].join("\n");
 
   const response = await fetch(webhook, {

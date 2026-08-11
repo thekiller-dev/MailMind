@@ -62,9 +62,7 @@ export function resolveWhatsAppCommand(text: string): string {
 
 export function extractLinkToken(text: string): string | null {
   const trimmed = sanitizeWhatsAppText(text);
-  const match =
-    /^(?:\/(?:start|lien)|lien|start)\s+(\S+)/i.exec(trimmed) ??
-    null;
+  const match = /^(?:\/(?:start|lien)|lien|start)\s+(\S+)/i.exec(trimmed) ?? null;
   return match?.[1] ?? null;
 }
 

@@ -225,8 +225,9 @@ function Dashboard() {
                     ) : null}
                   </div>
                 ))}
-              {syncHealth.recent.filter((run) => run.status === "failed" || run.status === "partial")
-                .length === 0 ? (
+              {syncHealth.recent.filter(
+                (run) => run.status === "failed" || run.status === "partial",
+              ).length === 0 ? (
                 <p className="text-sm text-muted-foreground">
                   Aucun échec récent. Dernières syncs OK : {syncHealth.successLast24h}.
                 </p>

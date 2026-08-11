@@ -10,11 +10,7 @@ import { formatDigest60Seconds } from "./product-insights";
 
 type DigestChannel = "telegram" | "whatsapp" | "kappelas";
 
-async function loadDigestContext(
-  supabase: SupabaseClient,
-  channel: DigestChannel,
-  now: Date,
-) {
+async function loadDigestContext(supabase: SupabaseClient, channel: DigestChannel, now: Date) {
   const table =
     channel === "telegram"
       ? "telegram_connections"

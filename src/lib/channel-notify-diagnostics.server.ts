@@ -62,9 +62,7 @@ export async function getChannelNotifyDiagnostics(
 
   const blockers: string[] = [];
   if (plan !== "pro") {
-    blockers.push(
-      "profiles.plan n'est pas « pro » — Telegram, WhatsApp et Kappelas sont coupés.",
-    );
+    blockers.push("profiles.plan n'est pas « pro » — Telegram, WhatsApp et Kappelas sont coupés.");
   }
   if (!telegram?.chat_id && !whatsapp?.chat_id && kappelas?.chat_id == null) {
     blockers.push("Aucun canal lié (Telegram / WhatsApp / Kappelas).");

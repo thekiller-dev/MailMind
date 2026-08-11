@@ -96,9 +96,7 @@ export async function sendOpenWaText(chatId: string, text: string): Promise<void
   const config = getOpenWaConfig();
   if (!config) {
     // Avant : return silencieux → webhook 200, aucune réponse WhatsApp, liaison « fantôme ».
-    throw new Error(
-      "OpenWA non configuré (OPENWA_BASE_URL / OPENWA_API_KEY / OPENWA_SESSION_ID)",
-    );
+    throw new Error("OpenWA non configuré (OPENWA_BASE_URL / OPENWA_API_KEY / OPENWA_SESSION_ID)");
   }
 
   const response = await fetch(

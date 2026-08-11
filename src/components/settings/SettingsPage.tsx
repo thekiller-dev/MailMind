@@ -32,9 +32,7 @@ import {
   startProCheckout,
   type BillingSnapshot,
 } from "@/lib/billing.functions";
-import {
-  getMyChannelNotifyDiagnostics,
-} from "@/lib/channel-notify-diagnostics.functions";
+import { getMyChannelNotifyDiagnostics } from "@/lib/channel-notify-diagnostics.functions";
 import type { ChannelNotifyDiagnostics } from "@/lib/channel-notify-diagnostics.server";
 import {
   createTelegramLink,
@@ -58,7 +56,14 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import type { UserPlan } from "@/lib/plan.server";
 
-const tabs = ["Comptes", "Abonnement", "Préférences IA", "Listes", "Notifications", "Exports"] as const;
+const tabs = [
+  "Comptes",
+  "Abonnement",
+  "Préférences IA",
+  "Listes",
+  "Notifications",
+  "Exports",
+] as const;
 type Tab = (typeof tabs)[number];
 
 export function SettingsPage({ gmailStatus }: { gmailStatus?: string }) {
@@ -398,9 +403,7 @@ function AccountsTab() {
             <Toggle
               label="Nettoyage auto après 5 jours"
               on={Boolean(settings.autoCleanupAfterDays && settings.autoCleanupAfterDays > 0)}
-              onChange={(value) =>
-                void updateSettings({ autoCleanupAfterDays: value ? 5 : null })
-              }
+              onChange={(value) => void updateSettings({ autoCleanupAfterDays: value ? 5 : null })}
             />
             <button
               type="button"
@@ -676,13 +679,11 @@ function BillingTab() {
           ) : null}
         </div>
         <ul className="space-y-1 text-sm text-muted-foreground">
+          <li>Comptes e-mail : jusqu’à {billing.maxEmailAccounts}</li>
+          <li>Analyses IA / jour : {billing.plan === "pro" ? "2 000" : "100"} (selon env)</li>
           <li>
-            Comptes e-mail : jusqu’à {billing.maxEmailAccounts}
+            Canaux Telegram / WhatsApp : {billing.plan === "pro" ? "inclus" : "Pro uniquement"}
           </li>
-          <li>
-            Analyses IA / jour : {billing.plan === "pro" ? "2 000" : "100"} (selon env)
-          </li>
-          <li>Canaux Telegram / WhatsApp : {billing.plan === "pro" ? "inclus" : "Pro uniquement"}</li>
         </ul>
         <div className="flex flex-wrap gap-3">
           {billing.plan !== "pro" ? (
@@ -722,8 +723,8 @@ function BillingTab() {
         </div>
         {!billing.stripeConfigured ? (
           <p className="text-xs text-amber-600 dark:text-amber-400">
-            Stripe n’est pas encore configuré côté serveur (`STRIPE_SECRET_KEY`,
-            `STRIPE_PRICE_PRO`, `STRIPE_WEBHOOK_SECRET`).
+            Stripe n’est pas encore configuré côté serveur (`STRIPE_SECRET_KEY`, `STRIPE_PRICE_PRO`,
+            `STRIPE_WEBHOOK_SECRET`).
           </p>
         ) : null}
       </div>
@@ -786,8 +787,8 @@ function NotificationsTab() {
           desc="Telegram, WhatsApp et Kappelas sont réservés au plan Pro."
         >
           <p className="text-sm text-muted-foreground">
-            Passez en Pro pour lier vos canaux, recevoir les récaps après chaque analyse et
-            piloter MailMind par commandes.
+            Passez en Pro pour lier vos canaux, recevoir les récaps après chaque analyse et piloter
+            MailMind par commandes.
           </p>
           <p className="mt-4 inline-flex rounded-full border border-border px-3 py-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
             Plan actuel : Free — onglet Abonnement pour upgrader
@@ -1145,7 +1146,8 @@ function WhatsAppCard({
   }
 
   const isLinked = connection?.status === "linked";
-  const isPendingLink = !isLinked && (awaitingLink || connection?.status === "pending" || Boolean(linkInfo));
+  const isPendingLink =
+    !isLinked && (awaitingLink || connection?.status === "pending" || Boolean(linkInfo));
   return (
     <Card
       title="WhatsApp"
@@ -1202,8 +1204,12 @@ function WhatsAppCard({
                 <p className="mt-2 text-xs text-muted-foreground">Numéro : +{linkInfo.waNumber}</p>
               )}
               <p className="mt-2 text-xs text-muted-foreground">
-                Expire à {new Date(linkInfo.expiresAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}.
-                Après envoi, MailMind répond sur WhatsApp et cette carte passe à « Connecté ».
+                Expire à{" "}
+                {new Date(linkInfo.expiresAt).toLocaleTimeString("fr-FR", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+                . Après envoi, MailMind répond sur WhatsApp et cette carte passe à « Connecté ».
               </p>
             </div>
           )}

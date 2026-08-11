@@ -3,9 +3,9 @@ import { deriveEmailAction, isSecurityAlert } from "./channel-notify-shared";
 
 describe("deriveEmailAction", () => {
   it("prefers explicit intent", () => {
-    expect(
-      deriveEmailAction({ intent: "Répondre avant vendredi", category: "Urgent" }),
-    ).toBe("Répondre avant vendredi");
+    expect(deriveEmailAction({ intent: "Répondre avant vendredi", category: "Urgent" })).toBe(
+      "Répondre avant vendredi",
+    );
   });
 
   it("falls back for urgent and security categories", () => {

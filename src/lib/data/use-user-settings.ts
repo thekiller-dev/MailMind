@@ -58,7 +58,9 @@ export function useUserSettings(): UserSettingsResult {
         const data = await dedupeDataRequest(`settings:${userId}`, async () => {
           const { data: settingsData, error: queryError } = await supabase
             .from("user_settings")
-            .select("settings,telegram_digest_time,whatsapp_digest_time,kappelas_digest_time,timezone")
+            .select(
+              "settings,telegram_digest_time,whatsapp_digest_time,kappelas_digest_time,timezone",
+            )
             .eq("user_id", userId)
             .maybeSingle();
           if (queryError) throw queryError;

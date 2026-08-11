@@ -1,9 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import {
-  deriveEmailAction,
-  isSecurityAlert,
-  logChannelNotifySkip,
-} from "./channel-notify-shared";
+import { deriveEmailAction, isSecurityAlert, logChannelNotifySkip } from "./channel-notify-shared";
 import { sendOpenWaText } from "./openwa.server";
 import { getUserPlan } from "./plan.server";
 import type { EmailNotification } from "./telegram-notify.server";
@@ -79,13 +75,7 @@ export async function notifyWhatsAppEmailAnalysis(
       .filter(Boolean)
       .join("\n");
 
-    await claimAndSend(
-      supabase,
-      connection.chat_id,
-      "recap",
-      `email:${email.id}:recap`,
-      recapText,
-    );
+    await claimAndSend(supabase, connection.chat_id, "recap", `email:${email.id}:recap`, recapText);
   }
 
   if (isUrgent && connection.urgent_alerts) {
@@ -99,13 +89,7 @@ export async function notifyWhatsAppEmailAnalysis(
     ]
       .filter(Boolean)
       .join("\n");
-    await claimAndSend(
-      supabase,
-      connection.chat_id,
-      "urgent",
-      `email:${email.id}:urgent`,
-      text,
-    );
+    await claimAndSend(supabase, connection.chat_id, "urgent", `email:${email.id}:urgent`, text);
   }
 
   if (security && connection.phishing_alerts) {

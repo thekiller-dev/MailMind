@@ -89,11 +89,7 @@ async function sendAlerts(
   );
 }
 
-async function linkFromToken(
-  supabase: SupabaseClient,
-  msg: Message,
-  token: string,
-): Promise<void> {
+async function linkFromToken(supabase: SupabaseClient, msg: Message, token: string): Promise<void> {
   const tokenHash = await hashToken(token);
   const { data: pending, error } = await supabase
     .from("kappelas_connections")
@@ -103,7 +99,10 @@ async function linkFromToken(
     .maybeSingle();
   if (error) throw error;
   if (!pending) {
-    await sendKappelasText(msg.chat_id, "Lien invalide ou déjà utilisé. Régénérez-en un depuis MailMind.");
+    await sendKappelasText(
+      msg.chat_id,
+      "Lien invalide ou déjà utilisé. Régénérez-en un depuis MailMind.",
+    );
     return;
   }
   if (

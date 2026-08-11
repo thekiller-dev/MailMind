@@ -13,10 +13,7 @@ export function maxEmailAccounts(plan: UserPlan): number {
   return plan === "pro" ? 5 : 1;
 }
 
-export async function getUserPlan(
-  supabase: SupabaseClient,
-  userId: string,
-): Promise<UserPlan> {
+export async function getUserPlan(supabase: SupabaseClient, userId: string): Promise<UserPlan> {
   const { data, error } = await supabase
     .from("profiles")
     .select("plan")
@@ -32,9 +29,7 @@ export async function assertProMessaging(
 ): Promise<UserPlan> {
   const plan = await getUserPlan(supabase, userId);
   if (plan !== "pro") {
-    throw new PlanRestrictionError(
-      "Telegram, WhatsApp et Kappelas sont réservés au plan Pro.",
-    );
+    throw new PlanRestrictionError("Telegram, WhatsApp et Kappelas sont réservés au plan Pro.");
   }
   return plan;
 }

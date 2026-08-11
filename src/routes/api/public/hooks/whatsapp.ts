@@ -1,9 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { verifyOpenWaSignature } from "@/lib/openwa.server";
-import {
-  handleOpenWaMessageReceived,
-  type OpenWaWebhookBody,
-} from "@/lib/whatsapp-webhook.server";
+import { handleOpenWaMessageReceived, type OpenWaWebhookBody } from "@/lib/whatsapp-webhook.server";
 
 /**
  * Webhook OpenWA → MailMind.
@@ -51,10 +48,7 @@ export const Route = createFileRoute("/api/public/hooks/whatsapp")({
         }
 
         const eventName =
-          request.headers.get("x-openwa-event") ??
-          payload.event ??
-          payload.payload?.event ??
-          "";
+          request.headers.get("x-openwa-event") ?? payload.event ?? payload.payload?.event ?? "";
         if (eventName === "test") {
           // OpenWA « Test webhook » : prouve HMAC + reachabilité, PAS une liaison LIEN.
           console.info("whatsapp webhook test ok", {
@@ -76,11 +70,7 @@ export const Route = createFileRoute("/api/public/hooks/whatsapp")({
 
         try {
           const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-          const result = await handleOpenWaMessageReceived(
-            supabaseAdmin,
-            payload,
-            idempotencyKey,
-          );
+          const result = await handleOpenWaMessageReceived(supabaseAdmin, payload, idempotencyKey);
           return Response.json(result);
         } catch (error) {
           console.error("whatsapp webhook failed", error);

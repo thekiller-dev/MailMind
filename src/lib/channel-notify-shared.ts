@@ -18,9 +18,7 @@ export function isSecurityAlert(email: {
   risk_score: number | null;
 }): boolean {
   return (
-    email.category === "Phishing" ||
-    email.category === "Sécurité" ||
-    (email.risk_score ?? 0) >= 0.6
+    email.category === "Phishing" || email.category === "Sécurité" || (email.risk_score ?? 0) >= 0.6
   );
 }
 

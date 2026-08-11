@@ -50,8 +50,7 @@ async function handleSync(request: Request) {
 
   const processed = await processGmailSyncQueue(supabaseAdmin, 10);
 
-  let cleanup: { usersProcessed: number; deletedTotal: number } | { error: string } | null =
-    null;
+  let cleanup: { usersProcessed: number; deletedTotal: number } | { error: string } | null = null;
   try {
     const { runRetentionCleanup } = await import("@/lib/email-cleanup.server");
     cleanup = await runRetentionCleanup(supabaseAdmin);

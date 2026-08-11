@@ -1,9 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import {
-  deriveEmailAction,
-  isSecurityAlert,
-  logChannelNotifySkip,
-} from "./channel-notify-shared";
+import { deriveEmailAction, isSecurityAlert, logChannelNotifySkip } from "./channel-notify-shared";
 import { sendKappelasText } from "./kappelas.server";
 import { getUserPlan } from "./plan.server";
 import type { EmailNotification } from "./telegram-notify.server";

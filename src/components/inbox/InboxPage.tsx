@@ -291,9 +291,7 @@ function EmailDetail({ email, onClose }: { email: DbEmail; onClose: () => void }
               aria-selected={mobileTab === "message"}
               onClick={() => setMobileTab("message")}
               className={`rounded-md px-3 py-1.5 text-[11px] font-semibold ${
-                mobileTab === "message"
-                  ? "bg-foreground text-background"
-                  : "text-muted-foreground"
+                mobileTab === "message" ? "bg-foreground text-background" : "text-muted-foreground"
               }`}
             >
               Message

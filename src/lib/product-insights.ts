@@ -3,13 +3,7 @@
  */
 
 export type EngagementKind =
-  | "none"
-  | "meeting"
-  | "invoice"
-  | "followup"
-  | "signature"
-  | "deadline"
-  | "other";
+  "none" | "meeting" | "invoice" | "followup" | "signature" | "deadline" | "other";
 
 export function isNoiseCategory(category: string | null | undefined): boolean {
   return category === "Notification" || category === "Commercial" || category === "Autre";
@@ -24,7 +18,11 @@ export function shouldSilenceRecap(input: {
   if (!input.smartSilence) return false;
   const risk = input.riskScore ?? 0;
   if (risk >= 0.6) return false;
-  if (input.category === "Urgent" || input.category === "Phishing" || input.category === "Sécurité") {
+  if (
+    input.category === "Urgent" ||
+    input.category === "Phishing" ||
+    input.category === "Sécurité"
+  ) {
     return false;
   }
   if (input.engagement && input.engagement !== "none") return false;
@@ -61,13 +59,9 @@ export function formatDigest60Seconds(input: {
   const urgent = input.emails.filter((e) => e.category === "Urgent").length;
   const threats = input.emails.filter(
     (e) =>
-      e.category === "Phishing" ||
-      e.category === "Sécurité" ||
-      Number(e.risk_score ?? 0) >= 0.6,
+      e.category === "Phishing" || e.category === "Sécurité" || Number(e.risk_score ?? 0) >= 0.6,
   ).length;
-  const engagements = input.emails.filter(
-    (e) => e.engagement && e.engagement !== "none",
-  ).length;
+  const engagements = input.emails.filter((e) => e.engagement && e.engagement !== "none").length;
   const minutes = estimateMinutesSaved(input.analyzedCount);
   const hours = (minutes / 60).toFixed(1);
 

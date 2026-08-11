@@ -41,8 +41,8 @@ function digitsOnlyPhone(value: string): string {
 function isOpenWaEnvReady(): boolean {
   return Boolean(
     process.env.OPENWA_BASE_URL?.trim() &&
-      process.env.OPENWA_API_KEY?.trim() &&
-      process.env.OPENWA_SESSION_ID?.trim(),
+    process.env.OPENWA_API_KEY?.trim() &&
+    process.env.OPENWA_SESSION_ID?.trim(),
   );
 }
 
