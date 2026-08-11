@@ -34,7 +34,17 @@ const verifyOnly = process.argv.includes("--verify");
 
 if (verifyOnly) {
   const info = await bot.webhooks.getInfo();
-  console.log(JSON.stringify(info, null, 2));
+  const redacted =
+    info && typeof info === "object"
+      ? {
+          ...info,
+          url:
+            typeof info.url === "string" && secret
+              ? info.url.replaceAll(secret, "***")
+              : info.url,
+        }
+      : info;
+  console.log(JSON.stringify(redacted, null, 2));
   process.exit(0);
 }
 
